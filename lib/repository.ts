@@ -1,7 +1,8 @@
+import type {BenchmarkDatabase} from '../db/raw.ts';
 import { uploadSchema, summarize, cohortKey } from './benchmark.ts';
 import { ApiError } from './access.ts';
 
-export async function saveSubmission(db:D1Database, owner:string, input:unknown) {
+export async function saveSubmission(db:BenchmarkDatabase, owner:string, input:unknown) {
   const parsed=uploadSchema.safeParse(input);
   if(!parsed.success)throw new ApiError(400,'Invalid report or missing collection consent. Use the current native runner.');
   const {report,consent}=parsed.data;
@@ -24,25 +25,25 @@ export async function saveSubmission(db:D1Database, owner:string, input:unknown)
   }
   return {id,published:consent.publish,status:'community-unverified'};
 }
-export async function ownSubmissions(db:D1Database,owner:string) {
+export async function ownSubmissions(db:BenchmarkDatabase,owner:string) {
   return db.prepare('SELECT id, run_id AS runId, collected_at AS collectedAt, is_public AS isPublic, report_json AS reportJson FROM submissions WHERE owner_id = ? ORDER BY collected_at DESC LIMIT 100').bind(owner).all();
 }
-export async function publication(db:D1Database,owner:string,id:string,publish:boolean,version:string) {
+export async function publication(db:BenchmarkDatabase,owner:string,id:string,publish:boolean,version:string) {
   const result=await db.prepare('UPDATE submissions SET is_public = ?, publication_changed_at = ?, consent_version = ? WHERE id = ? AND owner_id = ?').bind(publish?1:0,Date.now(),version,id,owner).run();
   if(!result.meta.changes)throw new ApiError(404,'Submission not found');
   return {updated:true};
 }
-export async function deleteSubmission(db:D1Database,owner:string,id:string) {
+export async function deleteSubmission(db:BenchmarkDatabase,owner:string,id:string) {
   const result=await db.prepare('DELETE FROM submissions WHERE id = ? AND owner_id = ?').bind(id,owner).run();
   if(!result.meta.changes)throw new ApiError(404,'Submission not found');
   return {deleted:true};
 }
-export async function leaderboard(db:D1Database) {
+export async function leaderboard(db:BenchmarkDatabase) {
   return db.prepare(`SELECT m.cohort, m.model_hash AS modelHash, m.input_tokens AS inputTokens,
     m.chip, m.machine, m.cpu_cores AS cpuCores, m.memory_bytes AS memoryBytes, m.os_version AS osVersion,
     m.runtime_hash AS runtimeHash, AVG(m.decode_tps) AS decodeTps, AVG(m.ttft_ms) AS ttftMs,
     AVG(m.prefill_tps) AS prefillTps, COUNT(DISTINCT s.id) AS runs, COUNT(DISTINCT s.owner_id) AS contributors
     FROM measurements m JOIN submissions s ON s.id = m.submission_id WHERE s.is_public = 1
-    GROUP BY m.cohort, m.chip, m.machine, m.cpu_cores, m.memory_bytes, m.os_version, m.runtime_hash
+    GROUP BY m.cohort, m.model_hash, m.input_tokens, m.chip, m.machine, m.cpu_cores, m.memory_bytes, m.os_version, m.runtime_hash
     ORDER BY m.cohort, decodeTps DESC LIMIT 500`).all();
 }

@@ -1,7 +1,7 @@
 import SwiftUI
 import WebKit
 
-let siteOrigin = "https://local-ai-benchmark-lab.mossy-fern-2045.chatgpt.site"
+let siteOrigin = "https://tokfires.com"
 @MainActor final class UploadStore: NSObject, ObservableObject, WKNavigationDelegate {
     @Published var enabled = UserDefaults.standard.object(forKey: "autoUpload") as? Bool ?? true {
         didSet { UserDefaults.standard.set(enabled, forKey: "autoUpload"); if !enabled { status = "uploadPaused" } }

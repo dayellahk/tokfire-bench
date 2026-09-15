@@ -1,4 +1,4 @@
-# TokFire Bench 0.5.1 (macOS Apple Silicon)
+# TokFire Bench 0.5.2 (macOS Apple Silicon)
 
 A native SwiftUI benchmark lab with a live Hugging Face GGUF catalogue,
 hardware capacity estimates, visible progress, local history, readable assessments,

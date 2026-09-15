@@ -8,7 +8,7 @@ ditto --noextattr --norsrc "build/TokFire Bench.app" "$bench_stage/TokFire Bench
 codesign --verify --strict "$bench_stage/TokFire Bench.app"
 ln -s /Applications "$bench_stage/Applications"
 cat > "$bench_stage/READ ME.txt" <<'README'
-TokFire Bench 0.5.1 — by TokFire Labs · tokfires.com
+TokFire Bench 0.5.2 — by TokFire Labs · tokfires.com
 Apple Silicon local developer build
 
 Drag TokFire Bench.app to Applications, then open it.
@@ -43,7 +43,7 @@ Your existing oMLX service/configuration is not modified.
 Settings includes 20 interface languages. Technical runtime logs and the
 website authentication pages retain their own language.
 README
-bench_dmg="$PWD/build/TokFireBench-0.5.1-macos-arm64.dmg"
+bench_dmg="$PWD/build/TokFireBench-0.5.2-macos-arm64.dmg"
 hdiutil create -volname "TokFire Bench" -srcfolder "$bench_stage" -ov -format UDZO "$bench_dmg"
 hdiutil verify "$bench_dmg"
 shasum -a 256 "$bench_dmg" > "$bench_dmg.sha256"

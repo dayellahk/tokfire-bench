@@ -1,0 +1,7 @@
+[Unit]
+Description=TokFire daily MySQL backup
+After=mysql.service
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/tokfire-backup
+UMask=0077

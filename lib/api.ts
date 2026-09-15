@@ -7,7 +7,7 @@ export function json(body: unknown, status = 200) {
 }
 export async function writer(request: Request) {
   const user = await getChatGPTUser();
-  return authorizeWrite(request, user?.userId ?? null);
+  return authorizeWrite(request, user?.userId ?? null, process.env.BETTER_AUTH_URL);
 }
 export async function body(request: Request) {
   if (!request.headers.get('content-type')?.startsWith('application/json')) throw new ApiError(415, 'Expected JSON');

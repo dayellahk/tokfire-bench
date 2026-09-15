@@ -5,7 +5,7 @@ import Metal
 let supportFolder = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/LocalAIBench")
 let modelsFolder = supportFolder.appendingPathComponent("Models")
 let reportsFolder = supportFolder.appendingPathComponent("Reports")
-let communityURL = URL(string: "https://local-ai-benchmark-lab.mossy-fern-2045.chatgpt.site/api/v1/leaderboard")!
+let communityURL = URL(string: "https://tokfires.com/api/v1/leaderboard")!
 
 struct DeviceProfile {
     var chip: String

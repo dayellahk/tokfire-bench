@@ -82,3 +82,9 @@ test('unauthenticated and cross-origin mutations fail before storage',()=>{
   assert.throws(()=>authorizeWrite(new Request('https://bench.test/api',{headers:{origin:'https://attacker.test'}}),'owner'),{status:403});
   assert.equal(authorizeWrite(new Request('https://bench.test/api',{headers:{origin:'https://bench.test'}}),'owner'),'owner');
 });
+
+test('reverse proxy writes use the configured public origin, not an internal listener or spoofed header',()=>{
+ const internal='http://127.0.0.1:3000/api/v2/submissions';
+ assert.equal(authorizeWrite(new Request(internal,{headers:{origin:'https://tokfires.com'}}),'owner','https://tokfires.com'),'owner');
+ assert.throws(()=>authorizeWrite(new Request(internal,{headers:{origin:'https://attacker.invalid','x-forwarded-host':'attacker.invalid'}}),'owner','https://tokfires.com'),{status:403});
+});
