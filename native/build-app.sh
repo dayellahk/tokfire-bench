@@ -8,7 +8,7 @@ trap 'rm -rf "$bench_stage"' EXIT
 bench_app="$bench_stage/LocalAIBench.app"
 mkdir -p "$bench_app/Contents/MacOS" "$bench_app/Contents/Resources"
 cp "$bench_bin/LocalAIBench" "$bench_app/Contents/MacOS/LocalAIBench"
-cp Sources/LocalAIBench/Resources/*.py Sources/LocalAIBench/Resources/languages.json "$bench_app/Contents/Resources/"
+cp Sources/LocalAIBench/Resources/*.py Sources/LocalAIBench/Resources/languages.json Sources/LocalAIBench/Resources/lemon-squeezy.json "$bench_app/Contents/Resources/"
 cp Packaging/AppIcon.icns "$bench_app/Contents/Resources/AppIcon.icns"
 cat > "$bench_app/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -19,8 +19,8 @@ cat > "$bench_app/Contents/Info.plist" <<'PLIST'
 <key>CFBundleName</key><string>Local AI Bench</string>
 <key>CFBundleIconFile</key><string>AppIcon</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.4.0</string>
-<key>CFBundleVersion</key><string>5</string>
+<key>CFBundleShortVersionString</key><string>0.5.0</string>
+<key>CFBundleVersion</key><string>6</string>
 <key>LSMinimumSystemVersion</key><string>13.0</string>
 <key>NSHighResolutionCapable</key><true/>
 </dict></plist>

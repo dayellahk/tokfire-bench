@@ -1,4 +1,4 @@
-# Local AI Bench 0.4.0 (macOS Apple Silicon)
+# Local AI Bench 0.5.0 (macOS Apple Silicon)
 
 A native SwiftUI benchmark lab with a live Hugging Face GGUF catalogue,
 hardware capacity estimates, visible progress, local history, readable assessments,
@@ -16,10 +16,13 @@ and 20 UI languages (including Arabic/Urdu right-to-left layouts).
 
 ## Measurement profiles
 
-- `local-ai-text-v1`: exact 512/2048 input tokens, 128 output tokens, 3 measured runs
+- `local-ai-jobs-v1` (default): choose one model and 1–3 concurrent jobs, or
+  up to 20 with Pro. Three rounds, up to 128 output tokens per job.
+  GGUF uses exactly 512 input tokens; MLX uses server-counted variable input.
+- `local-ai-text-v1` (optional standard profile): exact 512/2048 input tokens, 128 output tokens, 3 measured runs
   per workload plus discarded warm-ups. Selected GGUFs run sequentially.
 - `local-ai-trial-v1`: one GGUF, 512 input/32 output, one measured run.
-- `local-ai-omlx-v1`: MLX text-completion serving workload, max 128 output tokens,
+- `local-ai-omlx-v1` (legacy history compatibility): MLX text-completion serving workload, max 128 output tokens,
   actual server-reported input/output counts, 1/2/3 concurrent requests × 3 rounds,
   one discarded warm-up. 18 measured requests. Cache hits and incomplete streams fail.
   oMLX decode/prefill rates come from usage; first-text latency and end-to-end rates
@@ -29,7 +32,9 @@ and 20 UI languages (including Arabic/Urdu right-to-left layouts).
 These profiles are separate. oMLX results do not enter the exact-token llama.cpp
 leaderboard. Output may stop before 128 tokens; actual counts and finish reason
 remain in the report. Model manifest hashes cover weights, configuration and tokenizer.
-Runtime identity records oMLX version and the selected executable/launcher fingerprint.
+Runtime identity records the selected executable/launcher fingerprint. The
+legacy oMLX profile also includes version text. Neither fingerprint attests
+the full runtime installation or dynamically loaded libraries.
 
 The 100–200 tok/s target is user-selected, **not a measured/guaranteed ChatGPT plan
 speed**. Assessments also consider first-text wait. For concurrent tests, the
@@ -43,7 +48,7 @@ JSON and Markdown reports are saved in:
 
 Automatic upload is ON by default and visible before Run. Public sharing is a
 separate switch, OFF by default. Connect the website account once in the app.
-Reports contain hardware, runtime/model fingerprints, model name for MLX, timing
+Reports contain hardware, runtime/model fingerprints, model name in serving/job profiles, timing
 and concurrency measurements. Prompts, generated text and local paths are excluded.
 Failed/offline uploads remain in a local Outbox. Turning upload off prevents queued
 uploads from starting; an already-sent request cannot be recalled. Clear the queue
@@ -74,3 +79,31 @@ Developer distribution only: the DMG is ad-hoc signed, not Developer ID signed o
 notarized. It bundles neither inference runtimes nor model weights. UI translations
 are initial translations; professional/native-speaker review remains advisable.
 Technical logs and website sign-in retain their own language.
+
+
+## Concurrent jobs and Lemon Squeezy Pro (0.5)
+
+Choose one model, then select 1, 2 or 3 simultaneous jobs before Run. Both
+llama.cpp/GGUF and oMLX/MLX use one isolated model server. Jobs share that
+model; this is not a count of people or distinct models. Each measured round
+starts all selected requests together, repeated three times. The runtime may
+schedule or queue requests; TTFT includes that waiting. The older standard
+GGUF sequential profile remains available by switching off Concurrent job test.
+
+The new `local-ai-jobs-v1` report records job IDs, model hash, engine, selected
+count, three rounds and aggregate throughput. Reports from different counts
+must not be combined into a single comparison. Progress and commentary show
+individual jobs as well as the slowest sample. Pro does not guarantee a speed,
+GPU parallelism, or enough memory for 20 jobs.
+
+Pro is a one-time HK$180 purchase using Lemon Squeezy license keys, unlocking
+4–20 concurrent jobs on the same model. One license activates one Mac. Activation and each Pro test require
+internet verification. Keys are stored in macOS Keychain, sent only to Lemon Squeezy,
+and passed to the local runner over stdin (not argv or reports). The runner
+independently validates the active license instance, exact store/product/variant,
+and perpetual expiry. Seller-side refund handling must disable the license.
+Deactivation releases this Mac’s activation instance. Offline use remains available for 1–3 free jobs.
+
+Lemon Squeezy product configuration is in `Sources/LocalAIBench/Resources/lemon-squeezy.json`.
+Zero store/product/variant IDs disable purchases and activation; it never unlocks Pro.
+See `../docs/LEMON-SQUEEZY-SETUP.md` for the seller setup and outstanding live checks.

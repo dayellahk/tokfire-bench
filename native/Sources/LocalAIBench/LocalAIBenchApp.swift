@@ -64,7 +64,7 @@ struct WorkspaceView: View {
             sidebar
             ScrollViewReader { proxy in
                 ScrollView { VStack(alignment: .leading, spacing: 24) {
-                    HStack { Text("LOCAL AI / BENCHMARK LAB").font(.system(size: 10, weight: .semibold, design: .monospaced)).tracking(1.5).foregroundColor(accent); Spacer(); Tag(text: "v0.4.0 · Apple Silicon") }
+                    HStack { Text("LOCAL AI / BENCHMARK LAB").font(.system(size: 10, weight: .semibold, design: .monospaced)).tracking(1.5).foregroundColor(accent); Spacer(); Tag(text: "v0.5.0 · Apple Silicon") }
                     VStack(alignment: .leading, spacing: 9) { Text(L(page == .discover ? "headline" : page.rawValue)).font(.system(size: 30, weight: .bold)); Text(L("subhead")).foregroundColor(muted) }
                     switch page { case .discover: discovery; case .benchmark: benchmark; case .history: history; case .settings: settings }
                     Label(L("privacy"), systemImage: "lock.shield").font(.caption).foregroundColor(muted)
@@ -80,6 +80,7 @@ struct WorkspaceView: View {
             if value == "量度中" && CommandLine.arguments.contains("--stop-on-measurement") { bench.cancel() }
             if value == "量度中" && CommandLine.arguments.contains("--quit-on-measurement") { NSApp.terminate(nil) }
         }
+        .onChange(of: bench.completedSamples) { _ in captureLater(name: "progress") }
         .onChange(of: catalog.loading) { loading in if !loading { captureLater(name: "catalog"); if CommandLine.arguments.contains("--preview-model"), let model = catalog.models.first { catalog.select(model); showModel = true } } }
         .onChange(of: page) { _ in captureLater(name: "page") }
         .task {
@@ -87,10 +88,12 @@ struct WorkspaceView: View {
             if let i = CommandLine.arguments.firstIndex(of: "--language"), CommandLine.arguments.indices.contains(i+1) { lang.code = CommandLine.arguments[i+1] }
             if CommandLine.arguments.contains("--offline") || !catalog.online { catalog.setOnline(false) } else { catalog.refresh() }
             if CommandLine.arguments.contains("--no-upload") { bench.uploads.enabled = false }
-            if let i = CommandLine.arguments.firstIndex(of: "--run-model"), CommandLine.arguments.indices.contains(i+1) { bench.add([URL(fileURLWithPath: CommandLine.arguments[i+1])]); bench.backend = "llama.cpp"; bench.trial = CommandLine.arguments.contains("--quick-trial"); page = .benchmark; bench.run() }
+            if let i = CommandLine.arguments.firstIndex(of: "--jobs"), CommandLine.arguments.indices.contains(i+1), let count = Int(CommandLine.arguments[i+1]) { bench.concurrentJobs = count }
+            if let i = CommandLine.arguments.firstIndex(of: "--run-model"), CommandLine.arguments.indices.contains(i+1) { bench.add([URL(fileURLWithPath: CommandLine.arguments[i+1])]); bench.backend = "llama.cpp"; bench.trial = CommandLine.arguments.contains("--quick-trial"); bench.concurrentMode = !bench.trial && !CommandLine.arguments.contains("--standard-test"); page = .benchmark; bench.run() }
             if let i = CommandLine.arguments.firstIndex(of: "--run-mlx"), CommandLine.arguments.indices.contains(i+1) { bench.mlxModel = URL(fileURLWithPath: CommandLine.arguments[i+1]); bench.backend = "oMLX"; page = .benchmark; bench.run() }
             if CommandLine.arguments.contains("--show-settings") { page = .settings }
-            captureLater(name: "initial"); await bench.readRuntimeHash()
+            if CommandLine.arguments.contains("--show-benchmark") { page = .benchmark }
+            captureLater(name: "initial"); await bench.pro.restore(); await bench.readRuntimeHash()
         }
     }
     private var phase: String { L(["準備就緒":"ready","檢查環境":"inspecting","驗證模型":"hashing","載入模型":"loading","準備工作負載":"inspecting","暖機中":"warmup","量度中":"measuring","關閉模型":"stopping","已停止":"stopped","正在停止":"stopping","測試失敗":"failed","測試完成":"complete","需要設定":"settings","無法啟動":"failed"][bench.phase] ?? "ready") }
@@ -146,11 +149,13 @@ struct WorkspaceView: View {
                 if bench.backend == "oMLX" {
                     HStack { Image(systemName: "folder"); Text(bench.mlxModel?.lastPathComponent ?? L("noModels")).lineLimit(2); Spacer(); Button(L("selectMLX")) { bench.chooseMLX() }.disabled(bench.running) }
                     Button("Hugging Face · MLX ↗") { open("https://huggingface.co/models?library=mlx&sort=trending") }
-                    Text("1 → 2 → 3 · \(L("concurrent")) · 3 × · 128 max output").font(.caption).foregroundColor(muted)
+                    JobControls(bench: bench, pro: bench.pro)
                 } else {
                     ForEach(bench.models, id: \.path) { url in HStack { Text(url.lastPathComponent).lineLimit(1); Spacer(); Button(L("remove")) { bench.models.removeAll { $0 == url } }.disabled(bench.running) } }
-                    HStack { Button(L("addModel")) { bench.chooseModels() }; Menu(L("queue")) { ForEach(bench.library, id: \.path) { url in Button(url.lastPathComponent) { bench.add([url]) } } }; Spacer(); Toggle(L("trial"), isOn: $bench.trial).toggleStyle(.switch) }.disabled(bench.running)
-                    Text(bench.trial ? "512 input / 32 output · 1 ×" : "512 + 2048 input / 128 output · 3 ×").font(.caption).foregroundColor(muted)
+                    HStack { Button(L(bench.usesJobs ? "selectModel" : "addModel")) { bench.chooseModels() }; Menu(L("queue")) { ForEach(bench.library, id: \.path) { url in Button(url.lastPathComponent) { if bench.usesJobs { bench.models = [url] } else { bench.add([url]) } } } }; Spacer(); Toggle(L("trial"), isOn: $bench.trial).toggleStyle(.switch).disabled(bench.concurrentMode) }.disabled(bench.running)
+                    Toggle(L("concurrentMode"), isOn: $bench.concurrentMode).disabled(bench.running)
+                    if bench.concurrentMode { JobControls(bench: bench, pro: bench.pro); if bench.models.count != 1 { Text(L("oneModelJobs")).font(.caption).foregroundColor(.orange) } }
+                    else { Text(bench.trial ? "512 input / 32 output · 1 ×" : "512 + 2048 input / 128 output · 3 ×").font(.caption).foregroundColor(muted) }
                 }
                 Divider(); UploadPanel(store: bench.uploads)
                 HStack { Spacer(); if bench.running { Button(L("stop")) { bench.cancel() }.disabled(bench.stopping) } else { Button { bench.run() } label: { Label(L("start"), systemImage: "play.fill").padding(.vertical, 5) }.buttonStyle(.borderedProminent).disabled(!bench.validSelection || catalog.downloading) } }
@@ -158,6 +163,8 @@ struct WorkspaceView: View {
             Panel(title: "02 / " + L("progress")) {
                 HStack { Text(phase).font(.title2.bold()); if bench.running { ProgressView().controlSize(.small) }; Spacer(); if let start = bench.started, bench.running { TimelineView(.periodic(from: .now, by: 1)) { _ in Text("\(Int(Date().timeIntervalSince(start))) s").monospacedDigit() } } }
                 ProgressView(value: bench.progress); Text("\(bench.completedSamples) / \(bench.totalSamples) · " + L("completed")).font(.caption).foregroundColor(muted)
+                if ["測試失敗", "無法啟動", "需要設定"].contains(bench.phase) { Text(bench.message).font(.callout).foregroundColor(.red).textSelection(.enabled) }
+                if let job = bench.latest?.jobId { Tag(text: "Job \(job)") }
                 if let sample = bench.latest { HStack { Metric(title: L("speed"), value: String(format: "%.1f", sample.decodeTps), unit: "tok/s"); Metric(title: L("ttft"), value: String(format: "%.0f", sample.ttftMs), unit: "ms"); if let n = sample.concurrency { Metric(title: L("concurrent"), value: "\(n)", unit: "") } } }
                 DisclosureGroup(L("events")) { Text(bench.events.isEmpty ? bench.message : bench.events.suffix(30).joined(separator: "\n")).font(.system(.caption, design: .monospaced)).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }
             }
@@ -166,17 +173,21 @@ struct WorkspaceView: View {
     }
     private func results(_ report: RunReport) -> some View {
         Panel(title: "03 / " + L("results")) {
-            HStack { Tag(text: report.isOMLX ? "oMLX · 1 / 2 / 3" : L(report.isTrial ? "trial" : "fullTest")); Spacer(); Button(L("assessment") + " ↓") { bench.exportCommentary() }; Button(L("export")) { bench.export() } }
+            HStack { Tag(text: report.isConcurrent ? (report.runtime.name ?? "") + " · " + L("concurrent") : L(report.isTrial ? "trial" : "fullTest")); Spacer(); Button(L("assessment") + " ↓") { bench.exportCommentary() }; Button(L("export")) { bench.export() } }
             ForEach(Array(report.models.enumerated()), id: \.offset) { index, model in
                 Text(model.modelName ?? "\(L("model")) \(index+1) · \(model.modelSha256.prefix(12))").font(.headline)
-                ForEach(report.isOMLX ? [1,2,3] : Array(Set(model.samples.map(\.inputTokens))).sorted(), id: \.self) { group in
-                    let rows = model.samples.filter { report.isOMLX ? $0.concurrency == group : $0.inputTokens == group }
+                ForEach(report.isConcurrent ? Array(Set(model.samples.compactMap(\.concurrency))).sorted() : Array(Set(model.samples.map(\.inputTokens))).sorted(), id: \.self) { group in
+                    let rows = model.samples.filter { report.isConcurrent ? $0.concurrency == group : $0.inputTokens == group }
                     let speed = median(rows.map(\.decodeTps)); let wait = median(rows.map(\.ttftMs))
                     VStack(alignment: .leading, spacing: 12) {
-                        Tag(text: report.isOMLX ? "\(L("concurrent")): \(group)" : "\(group) input", color: ink)
+                        Tag(text: report.isConcurrent ? "\(L("concurrent")): \(group)" : "\(group) input", color: ink)
                         HStack { Metric(title: L("perUser") + " · tok/s", value: String(format: "%.1f", speed), unit: ""); Metric(title: L("ttft"), value: String(format: "%.0f", wait), unit: "ms"); Metric(title: L("prefill"), value: String(format: "%.0f", median(rows.map(\.prefillTps))), unit: "tok/s") }
-                        Text(assessment(report.isOMLX ? rows.map(\.decodeTps).min() ?? speed : speed, report.isOMLX ? rows.map(\.ttftMs).max() ?? wait : wait)).font(.headline).foregroundColor(accent)
-                        if report.isOMLX {
+                        Text(assessment(report.isConcurrent ? rows.map(\.decodeTps).min() ?? speed : speed, report.isConcurrent ? rows.map(\.ttftMs).max() ?? wait : wait)).font(.headline).foregroundColor(accent)
+                        if report.isConcurrent {
+                            ForEach(Array(Set(rows.compactMap { $0.jobId ?? $0.user })).sorted(), id: \.self) { job in
+                                let samples = rows.filter { ($0.jobId ?? $0.user) == job }
+                                HStack { Text("Job \(job)").fontWeight(.semibold); Spacer(); Text(String(format: "%.1f tok/s · %@ %.0f ms", median(samples.map(\.decodeTps)), L("ttft"), median(samples.map(\.ttftMs)))) }.font(.caption).monospacedDigit()
+                            }
                             let worst = rows.map(\.decodeTps).min() ?? 0
                             Text("\(L("worstUser")): \(String(format: "%.1f", worst)) tok/s · \(L("endToEnd")): \(String(format: "%.1f", median(rows.compactMap(\.endToEndTps)))) tok/s").font(.caption)
                             if let groups = report.groups { Text("Σ \(String(format: "%.1f", median(groups.filter { $0.concurrency == group }.map(\.aggregateTps)))) tok/s · max \(L("ttft")): \(String(format: "%.0f", rows.map(\.ttftMs).max() ?? wait)) ms").font(.caption) }
@@ -184,7 +195,7 @@ struct WorkspaceView: View {
                         } else { Text(L(speed >= 100 ? "targetMet" : "targetMiss")).font(.callout).foregroundColor(.orange) }
                     }.padding(18).background(canvas, in: RoundedRectangle(cornerRadius: 13))
                 }
-                if !report.isOMLX { Text(L("notTested")).font(.caption).foregroundColor(muted) }
+                if !report.isConcurrent { Text(L("notTested")).font(.caption).foregroundColor(muted) }
                 Text("\(L("loadTime")): \(String(format: "%.2f", model.loadMs/1000)) s").font(.caption).foregroundColor(muted)
             }
             Divider(); Text(L("target")).font(.headline); Text(L("targetHelp")).font(.caption).foregroundColor(muted)
@@ -196,6 +207,7 @@ struct WorkspaceView: View {
     }
     private var settings: some View {
         VStack(spacing: 20) {
+            Panel { ProPanel(store: bench.pro) }.disabled(bench.running)
             Panel(title: L("language")) { Picker(L("language"), selection: $lang.code) { ForEach(LanguageStore.names, id: \.0) { code, name in Text(name).tag(code) } }.labelsHidden() }
             deviceHero
             Panel(title: L("runtime")) {
@@ -237,4 +249,26 @@ struct UploadPanel: View {
         UploadStatus(store: store)
         HStack { Button(L(store.connected ? "accountConnected" : "connectAccount")) { store.connect() }; if store.pending > 0 { Button(L("retry")) { store.connected ? store.retry() : store.connect() }; Button(L("clearQueue")) { store.clearQueue() } } }
     }.sheet(isPresented: $store.showAccount) { VStack { HStack { Text(L("connectAccount")).font(.headline); Spacer(); Button(L("done")) { store.showAccount = false } }.padding(); AccountWebView(store: store) }.frame(width: 850, height: 700) } }
+}
+
+struct JobControls: View {
+    @ObservedObject var bench: BenchController
+    @ObservedObject var pro: ProStore
+    @ObservedObject private var lang = LanguageStore.shared
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text(L("concurrent")).font(.headline)
+                Spacer()
+                Picker(L("concurrent"), selection: $bench.concurrentJobs) {
+                    ForEach(1...pro.limit, id: \.self) { n in Text("\(n) \(n == 1 ? "job" : "jobs")").tag(n) }
+                }.labelsHidden().frame(width: 150)
+                Tag(text: pro.active ? "Pro · 20" : "Free · 3")
+            }
+            Text(L("jobsHelp")).font(.caption).foregroundColor(muted)
+            Text("\(bench.concurrentJobs) jobs × 3 · 128 max output").font(.caption).monospacedDigit()
+            if !pro.active { DisclosureGroup(L("proUnlock")) { ProPanel(store: pro).padding(.top, 8) } }
+        }.disabled(bench.running)
+        .onChange(of: pro.limit) { limit in if bench.concurrentJobs > limit { bench.concurrentJobs = limit } }
+    }
 }

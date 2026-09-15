@@ -102,12 +102,13 @@ struct RunReport: Decodable, Identifiable {
     let specVersion: String; let runId: String; let measuredAt: String
     let hardware: Hardware; let runtime: Runtime; let models: [Model]
     var id: String { runId }
-    var isOMLX: Bool { specVersion == "local-ai-omlx-v1" }
+    var isOMLX: Bool { specVersion == "local-ai-omlx-v1" || runtime.name == "oMLX" }
+    var isConcurrent: Bool { ["local-ai-omlx-v1", "local-ai-jobs-v1"].contains(specVersion) }
     var isTrial: Bool { specVersion == "local-ai-trial-v1" }
 }
 struct Sample: Decodable {
     let inputTokens: Int; let outputTokens: Int; let ttftMs: Double; let prefillTps: Double; let decodeTps: Double
-    let concurrency: Int?; let `repeat`: Int?; let user: Int?; let endToEndTps: Double?
+    let concurrency: Int?; let `repeat`: Int?; let user: Int?; let jobId: Int?; let endToEndTps: Double?
 }
 struct HistoryItem: Identifiable {
     let url: URL; let report: RunReport

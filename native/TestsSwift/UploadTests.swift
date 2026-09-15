@@ -13,7 +13,7 @@ final class UploadTests: XCTestCase {
         XCTAssertTrue(store.connected)
         guard store.connected else { return }
         let root=URL(fileURLWithPath:#filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-        var report=try JSONSerialization.jsonObject(with:Data(contentsOf:root.appendingPathComponent("tests/fixtures/omlx-real.json"))) as! [String:Any]
+        var report=try JSONSerialization.jsonObject(with:Data(contentsOf:root.appendingPathComponent("tests/fixtures/jobs-llama-real.json"))) as! [String:Any]
         let id=UUID().uuidString; report["runId"]=id
         let reportURL=folder.appendingPathComponent("fixture.tmp");try JSONSerialization.data(withJSONObject:report).write(to:reportURL)
         store.enqueue(reportURL,consent:true,publication:false)

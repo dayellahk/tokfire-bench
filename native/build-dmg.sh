@@ -8,19 +8,20 @@ ditto --noextattr --norsrc build/LocalAIBench.app "$bench_stage/LocalAIBench.app
 codesign --verify --strict "$bench_stage/LocalAIBench.app"
 ln -s /Applications "$bench_stage/Applications"
 cat > "$bench_stage/READ ME.txt" <<'README'
-Local AI Bench 0.4.0 — Apple Silicon local developer build
+Local AI Bench 0.5.0 — Apple Silicon local developer build
 
 Drag LocalAIBench.app to Applications, then open it.
 This app is ad-hoc signed, not Developer ID signed or notarized.
 
-External requirements: Python 3.10+ and a Metal-enabled llama-server.
+External requirements: Python 3.10+ and llama.cpp or oMLX.
 On a Mac with Homebrew: brew install python llama.cpp
 Choose their executable paths in the app if needed.
 Model weights and inference/Python runtimes are not bundled.
 
 Use Explore to find live Hugging Face GGUF models, inspect size and license,
 then download and verify before testing. Offline mode supports local files.
-Choose 1–3 different single-file GGUF models. They run sequentially.
+Select one model and 1–3 concurrent jobs before Run (GGUF or MLX).
+Disable Concurrent job test for the older sequential GGUF comparison profile.
 Quick trial accepts one model. A local report and commentary are saved in:
 ~/Library/Application Support/LocalAIBench/Reports/
 
@@ -31,13 +32,17 @@ Quick trials and oMLX serving reports are stored separately from standard
 llama.cpp comparisons. Process RSS is not total GPU/unified memory.
 
 oMLX + MLX: install oMLX, choose its executable and an existing MLX model
-folder. The app starts an isolated server and measures 1, 2 and 3 users.
+folder. Choose 1, 2 or 3 concurrent jobs calling the SAME model.
+Lemon Squeezy Pro: HK$180 one-time, up to 20 jobs, one activated Mac.
+Deactivate before moving your license to another Mac.
+Pro activation and each Pro test require internet verification.
+Availability and pricing appear in Settings when configured.
 Your existing oMLX service/configuration is not modified.
 
 Settings includes 20 interface languages. Technical runtime logs and the
 website authentication pages retain their own language.
 README
-bench_dmg="$PWD/build/LocalAIBench-0.4.0-macos-arm64.dmg"
+bench_dmg="$PWD/build/LocalAIBench-0.5.0-macos-arm64.dmg"
 hdiutil create -volname "Local AI Bench" -srcfolder "$bench_stage" -ov -format UDZO "$bench_dmg"
 hdiutil verify "$bench_dmg"
 shasum -a 256 "$bench_dmg" > "$bench_dmg.sha256"

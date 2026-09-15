@@ -10,6 +10,10 @@ import UniformTypeIdentifiers
         didSet { UserDefaults.standard.set(python, forKey: "pythonExecutable") }
     }
     let uploads = UploadStore()
+    let pro = ProStore()
+    @Published var concurrentMode = true
+    @Published var concurrentJobs = 1
+    var usesJobs: Bool { backend == "oMLX" || concurrentMode }
     @Published var backend = "llama.cpp"
     @Published var omlx = UserDefaults.standard.string(forKey: "omlxExecutable") ?? "/opt/homebrew/bin/omlx" { didSet { UserDefaults.standard.set(omlx, forKey: "omlxExecutable") } }
     @Published var mlxModel: URL?
@@ -39,7 +43,7 @@ import UniformTypeIdentifiers
     private let device = DeviceProfile.detect()
     private var task: Process?
     private var runToken = UUID()
-    var validSelection: Bool { backend == "oMLX" ? mlxModel != nil : trial ? models.count == 1 : (1...3).contains(models.count) }
+    var validSelection: Bool { usesJobs ? (1...pro.limit).contains(concurrentJobs) && (backend == "oMLX" ? mlxModel != nil : models.count == 1) : trial ? models.count == 1 : (1...3).contains(models.count) }
     var progress: Double { totalSamples == 0 ? 0 : Double(completedSamples) / Double(totalSamples) }
     init() { reloadLibrary(); reloadHistory() }
     func add(_ urls: [URL]) {
@@ -52,9 +56,9 @@ import UniformTypeIdentifiers
         reloadLibrary()
     }
     func chooseModels() {
-        let panel = NSOpenPanel(); panel.allowsMultipleSelection = true; panel.canChooseDirectories = false
+        let panel = NSOpenPanel(); panel.allowsMultipleSelection = !usesJobs; panel.canChooseDirectories = false
         panel.allowedContentTypes = [UTType(filenameExtension: "gguf") ?? .data]
-        if panel.runModal() == .OK { add(panel.urls) }
+        if panel.runModal() == .OK { if usesJobs { models = panel.urls } else { add(panel.urls) } }
     }
     func chooseBinary(python isPython: Bool) {
         let panel = NSOpenPanel(); panel.canChooseDirectories = false
@@ -68,7 +72,7 @@ import UniformTypeIdentifiers
         let entries: [HistoryItem] = urls.compactMap { url in
             guard let attributes = try? FileManager.default.attributesOfItem(atPath: url.path), (attributes[.size] as? NSNumber)?.intValue ?? Int.max <= 200_000,
                   let data = try? Data(contentsOf: url), let report = try? JSONDecoder().decode(RunReport.self, from: data),
-                  ["local-ai-text-v1", "local-ai-trial-v1", "local-ai-omlx-v1"].contains(report.specVersion), !report.models.isEmpty,
+                  ["local-ai-text-v1", "local-ai-trial-v1", "local-ai-omlx-v1", "local-ai-jobs-v1"].contains(report.specVersion), !report.models.isEmpty,
                   report.models.allSatisfy({ !$0.samples.isEmpty && $0.samples.allSatisfy { $0.decodeTps.isFinite && $0.decodeTps > 0 && $0.ttftMs.isFinite && $0.ttftMs > 0 } }) else { return nil }
             return HistoryItem(url: url, report: report)
         }
@@ -76,7 +80,7 @@ import UniformTypeIdentifiers
     }
     func inspect(_ item: HistoryItem) { guard !running else { return }; result = item.report; report = item.url }
     func localEvidence(_ checksum: String) -> String? {
-        guard let entry = history.first(where: { !$0.report.isTrial && $0.report.hardware.chip == device.chip && $0.report.hardware.memoryBytes == device.memory && $0.report.runtime.binarySha256 == runtimeHash && $0.report.models.contains { $0.modelSha256 == checksum } }),
+        guard let entry = history.first(where: { $0.report.specVersion == "local-ai-text-v1" && $0.report.hardware.chip == device.chip && $0.report.hardware.memoryBytes == device.memory && $0.report.runtime.binarySha256 == runtimeHash && $0.report.models.contains { $0.modelSha256 == checksum } }),
               let model = entry.report.models.first(where: { $0.modelSha256 == checksum }) else { return nil }
         return String(format: "%.1f tok/s · 512 input", median(model.samples.filter { $0.inputTokens == 512 }.map(\.decodeTps)))
     }
@@ -86,22 +90,27 @@ import UniformTypeIdentifiers
     }
     func run() {
         guard !running, validSelection else { return }
-        let scriptName = backend == "oMLX" ? "omlx_runner" : "runner"
+        let scriptName = usesJobs ? "jobs_runner" : "runner"
         guard let script = Bundle.main.url(forResource: scriptName, withExtension: "py") ?? Bundle.module.url(forResource: scriptName, withExtension: "py") else { message = "找不到測試程式，請重新安裝 app。"; return }
         guard FileManager.default.isExecutableFile(atPath: python), FileManager.default.isExecutableFile(atPath: backend == "oMLX" ? omlx : server) else { phase = "需要設定"; message = "未找到 Python 或 llama-server。請在設定選擇可執行檔。"; return }
         do {
             try FileManager.default.createDirectory(at: reportsFolder, withIntermediateDirectories: true)
             let destination = reportsFolder.appendingPathComponent("benchmark-\(UUID().uuidString).json")
             let process = Process(); process.executableURL = URL(fileURLWithPath: python)
-            if backend == "oMLX" { process.arguments = ["-B", "-u", script.path, "--server", omlx, "--model", mlxModel!.path, "--output", destination.path] } else { process.arguments = ["-B", "-u", script.path] + (trial ? ["--trial"] : []) + ["--server", server, "--output", destination.path, "--models"] + models.map(\.path) }
+            if usesJobs {
+                process.arguments = ["-B", "-u", script.path, "--engine", backend, "--server", backend == "oMLX" ? omlx : server, "--model", backend == "oMLX" ? mlxModel!.path : models[0].path, "--jobs", String(concurrentJobs), "--output", destination.path]
+            } else { process.arguments = ["-B", "-u", script.path] + (trial ? ["--trial"] : []) + ["--server", server, "--output", destination.path, "--models"] + models.map(\.path) }
+            // Keys travel over stdin, never argv, report JSON or runtime logs.
+            let input = Pipe(); process.standardInput = input
+
             let pipe = Pipe(); process.standardOutput = pipe; process.standardError = pipe
             runToken = UUID(); let token = runToken
             running = true; stopping = false; result = nil; report = nil; latest = nil; completedSamples = 0
             runConsent = uploads.enabled; runPublication = uploads.publish
-            totalSamples = backend == "oMLX" ? 18 : models.count * (trial ? 1 : 6); currentModel = 0; events = []; started = Date()
+            totalSamples = usesJobs ? concurrentJobs * 3 : models.count * (trial ? 1 : 6); currentModel = 0; events = []; started = Date()
             phase = "檢查環境"; message = "檢查 runtime 及硬件，首次啟動可能需要編譯 Metal shaders。"
             task = process
-            do { try process.run() } catch { running = false; task = nil; throw error }
+            do { try process.run(); if usesJobs && concurrentJobs > 3, let key = pro.keyForRun { input.fileHandleForWriting.write(Data((key + "\n").utf8)) }; try? input.fileHandleForWriting.close() } catch { running = false; task = nil; throw error }
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
                 var pending = Data(); var diagnostic = ""
                 while true {
@@ -145,6 +154,7 @@ import UniformTypeIdentifiers
             if let row = event["sample"], let data = try? JSONSerialization.data(withJSONObject: row), let sample = try? JSONDecoder().decode(Sample.self, from: data) {
                 latest = sample; completedSamples += 1
             }
+        case "license": if event["valid"] as? Bool == false { pro.invalidate() }
         case "error": phase = "測試失敗"
         case "complete":
             if let data = try? Data(contentsOf: destination), let parsed = try? JSONDecoder().decode(RunReport.self, from: data) {
@@ -165,19 +175,23 @@ import UniformTypeIdentifiers
         var lines = ["# " + L("assessment"), report.hardware.chip + " · " + String(Int(report.hardware.memoryBytes / pow(1024,3))) + " GiB", report.measuredAt, report.specVersion, "", L("target"), L("targetHelp"), ""]
         for model in report.models {
             lines.append("## " + (model.modelName ?? String(model.modelSha256.prefix(12))))
-            for group in report.isOMLX ? [1,2,3] : Array(Set(model.samples.map(\.inputTokens))).sorted() {
-                let rows = model.samples.filter { report.isOMLX ? $0.concurrency == group : $0.inputTokens == group }
+            for group in report.isConcurrent ? Array(Set(model.samples.compactMap(\.concurrency))).sorted() : Array(Set(model.samples.map(\.inputTokens))).sorted() {
+                let rows = model.samples.filter { report.isConcurrent ? $0.concurrency == group : $0.inputTokens == group }
                 let speed = median(rows.map(\.decodeTps)); let wait = median(rows.map(\.ttftMs))
                 let slowest = rows.map(\.decodeTps).min() ?? speed; let longest = rows.map(\.ttftMs).max() ?? wait
-                lines += ["### " + (report.isOMLX ? L("concurrent") + ": " + String(group) : String(group) + " input"), String(format: "%@: %.1f tok/s · %@: %.0f ms", L("perUser"), speed, L("ttft"), wait), assessment(report.isOMLX ? slowest : speed, report.isOMLX ? longest : wait), L(slowest >= 100 ? "targetMet" : "targetMiss")]
-                if report.isOMLX {
+                lines += ["### " + (report.isConcurrent ? L("concurrent") + ": " + String(group) : String(group) + " input"), String(format: "%@: %.1f tok/s · %@: %.0f ms", L("perUser"), speed, L("ttft"), wait), assessment(report.isConcurrent ? slowest : speed, report.isConcurrent ? longest : wait), L(slowest >= 100 ? "targetMet" : "targetMiss")]
+                if report.isConcurrent {
+                    for job in Array(Set(rows.compactMap { $0.jobId ?? $0.user })).sorted() {
+                        let samples = rows.filter { ($0.jobId ?? $0.user) == job }
+                        lines.append(String(format: "Job %d: %.1f tok/s · %@ %.0f ms", job, median(samples.map(\.decodeTps)), L("ttft"), median(samples.map(\.ttftMs))))
+                    }
                     lines.append(String(format: "%@: %.1f tok/s · max %@: %.0f ms", L("worstUser"),slowest,L("ttft"),longest))
                     lines.append(String(format: "%@: %.1f tok/s",L("endToEnd"),median(rows.compactMap(\.endToEndTps))))
                     if let groups = report.groups { lines.append(String(format: "Σ: %.1f tok/s", median(groups.filter { $0.concurrency == group }.map(\.aggregateTps)))) }
                 }
                 lines.append("")
             }
-            if !report.isOMLX { lines.append(L("notTested")) }
+            if !report.isConcurrent { lines.append(L("notTested")) }
         }
         lines += ["", L("referenceHelp"), "https://omlx.ai/benchmarks/performance", "https://omlx.ai/benchmarks/intelligence"]
         return lines.joined(separator: "\n") + "\n"

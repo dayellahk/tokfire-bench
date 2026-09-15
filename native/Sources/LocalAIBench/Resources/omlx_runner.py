@@ -101,7 +101,7 @@ def run(options):
                 samples=[]; groups=[]
                 for concurrency in (1,2,3):
                     for repeat in (1,2,3):
-                        emit('progress', phase='measure', message=f'{concurrency} simultaneous users · repeat {repeat}/3')
+                        emit('progress', phase='measure', message=f'{concurrency} simultaneous jobs · repeat {repeat}/3')
                         barrier=threading.Barrier(concurrency)
                         begin=time.perf_counter()
                         with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as pool:

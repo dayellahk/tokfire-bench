@@ -19,4 +19,28 @@ const standard=reportSchema.innerType();
 const rawModel=standard.shape.models.element.innerType();
 const trialSample=rawModel.shape.samples.element.innerType().extend({inputTokens:z.literal(512),outputTokens:z.literal(32),repeat:z.literal(1)}).superRefine((s,c)=>{if(s.ttftMs>s.elapsedMs||Math.abs(s.prefillTps*s.prefillMs/1000-s.inputTokens)>1||Math.abs(s.decodeTps*s.decodeMs/1000-s.outputTokens)>1)c.addIssue({code:'custom',message:'Invalid trial timings'});});
 export const trialSchema=standard.extend({specVersion:z.literal('local-ai-trial-v1'),runnerVersion:z.literal('0.2.1'),models:z.array(rawModel.extend({samples:z.array(trialSample).length(1)})).length(1)}).superRefine((r,c)=>{if(r.runtime.threads!==r.hardware.cpuCores)c.addIssue({code:'custom',message:'Invalid thread count'});});
-export const nativeUploadSchema=z.object({report:z.union([reportSchema,servingSchema,trialSchema]),consent:z.object({collect:z.literal(true),publish:z.boolean(),version:z.literal(CONSENT_VERSION)}).strict()}).strict();
+// Selected simultaneous jobs are a separate profile from the old 1→2→3 sweep.
+const jobSample=sample.innerType().omit({user:true}).extend({
+ concurrency:z.number().int().min(1).max(20),jobId:z.number().int().min(1).max(20),
+ elapsedMs:positive.max(600000),ttftMs:positive.max(600000),
+}).superRefine((s,c)=>{if(s.jobId>s.concurrency||s.ttftMs>s.elapsedMs||Math.abs(s.endToEndTps*s.elapsedMs/1000-s.outputTokens)>.01)c.addIssue({code:'custom',message:'Invalid job timing'});});
+export const jobsSchema=z.object({
+ specVersion:z.literal('local-ai-jobs-v1'),runnerVersion:z.literal('0.5.0'),runId:z.string().uuid(),measuredAt:z.string().datetime(),
+ hardware:servingSchema.innerType().shape.hardware,
+ runtime:z.object({name:z.enum(['oMLX','llama.cpp']),binarySha256:hash}).strict(),
+ settings:z.object({concurrentJobs:z.number().int().min(1).max(20),repeats:z.literal(3),maxOutputTokens:z.literal(128),cache:z.literal('disabled; unique prefix'),inputProfile:z.enum(['family-guide-v1; variable','exact-512-v1']),serverLayout:z.literal('one shared model server'),contextPerSlot:z.literal(4096).nullable(),threadsPerServer:positive.int().max(512).nullable(),estimatedMemoryBytes:positive.int().max(2**43),targetTps:z.tuple([z.literal(100),z.literal(200)]),targetSource:z.literal('user-selected; not a ChatGPT plan speed guarantee')}).strict(),
+ jobs:z.array(z.object({jobId:z.number().int().min(1).max(20),modelSha256:hash}).strict()).min(1).max(20),
+ models:z.array(z.object({modelSha256:hash,modelName:z.string().min(1).max(200).regex(/^[^/\\\x00-\x1f]+$/),loadMs:positive.max(600000),samples:z.array(jobSample).min(3).max(60)}).strict()).length(1),
+ groups:z.array(z.object({concurrency:z.number().int().min(1).max(20),repeat:z.number().int().min(1).max(3),wallMs:positive.max(600000),aggregateTps:positive.max(20000000)}).strict()).length(3),
+}).strict().superRefine((r,c)=>{
+ const n=r.settings.concurrentJobs;const model=r.models[0];const rows=model.samples;
+ const invalid=()=>c.addIssue({code:'custom',message:'Incomplete or inconsistent concurrent jobs report'});
+ if(r.jobs.length!==n||new Set(r.jobs.map(j=>j.jobId)).size!==n||r.jobs.some(j=>j.jobId>n||j.modelSha256!==model.modelSha256))invalid();
+ if(rows.length!==3*n||new Set(rows.map(s=>`${s.repeat}:${s.jobId}`)).size!==3*n||rows.some(s=>s.concurrency!==n||s.jobId>n))invalid();
+ if(new Set(r.groups.map(g=>g.repeat)).size!==3)invalid();
+ for(const g of r.groups){const matching=rows.filter(s=>s.repeat===g.repeat);if(g.concurrency!==n||matching.length!==n||Math.abs(g.aggregateTps*g.wallMs/1000-matching.reduce((a,s)=>a+s.outputTokens,0))>.01||matching.some(s=>s.elapsedMs>g.wallMs))invalid();}
+ if(r.runtime.name==='llama.cpp'){
+  if(r.settings.inputProfile!=='exact-512-v1'||r.settings.contextPerSlot!==4096||r.settings.threadsPerServer!==r.hardware.cpuCores||rows.some(s=>s.inputTokens!==512||s.outputTokens!==128))invalid();
+ }else if(r.settings.inputProfile!=='family-guide-v1; variable'||r.settings.contextPerSlot!==null||r.settings.threadsPerServer!==null)invalid();
+});
+export const nativeUploadSchema=z.object({report:z.union([reportSchema,servingSchema,trialSchema,jobsSchema]),consent:z.object({collect:z.literal(true),publish:z.boolean(),version:z.literal(CONSENT_VERSION)}).strict()}).strict();

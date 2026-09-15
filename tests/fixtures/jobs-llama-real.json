@@ -1,0 +1,202 @@
+{
+  "specVersion": "local-ai-jobs-v1",
+  "runnerVersion": "0.5.0",
+  "runId": "89f34ebc-8d5e-4f5b-bf4f-48490ee05c11",
+  "measuredAt": "2026-09-15T15:58:36Z",
+  "hardware": {
+    "chip": "Apple M2 Max",
+    "machine": "Mac14,5",
+    "cpuCores": 12,
+    "memoryBytes": 103079215104,
+    "osVersion": "26.5.2"
+  },
+  "runtime": {
+    "name": "llama.cpp",
+    "binarySha256": "8939a1cf8a4e9a5cc18d6cd4d2d55440b48f8a44db00abe459a28d837ea051f7"
+  },
+  "settings": {
+    "concurrentJobs": 3,
+    "repeats": 3,
+    "maxOutputTokens": 128,
+    "cache": "disabled; unique prefix",
+    "inputProfile": "exact-512-v1",
+    "serverLayout": "one shared model server",
+    "contextPerSlot": 4096,
+    "threadsPerServer": 12,
+    "estimatedMemoryBytes": 5709744344,
+    "targetTps": [
+      100,
+      200
+    ],
+    "targetSource": "user-selected; not a ChatGPT plan speed guarantee"
+  },
+  "jobs": [
+    {
+      "jobId": 1,
+      "modelSha256": "ec2d5801640099e97d8d7e8003ad4d81f336e757811f03a26173dddf386602fd"
+    },
+    {
+      "jobId": 2,
+      "modelSha256": "ec2d5801640099e97d8d7e8003ad4d81f336e757811f03a26173dddf386602fd"
+    },
+    {
+      "jobId": 3,
+      "modelSha256": "ec2d5801640099e97d8d7e8003ad4d81f336e757811f03a26173dddf386602fd"
+    }
+  ],
+  "models": [
+    {
+      "modelSha256": "ec2d5801640099e97d8d7e8003ad4d81f336e757811f03a26173dddf386602fd",
+      "modelName": "MiniCPM5-2B-Q4_K_M.gguf",
+      "loadMs": 4351.626874995418,
+      "samples": [
+        {
+          "inputTokens": 512,
+          "outputTokens": 128,
+          "ttftMs": 710.7211250113323,
+          "prefillTps": 736.786058626297,
+          "decodeTps": 18.491783896568318,
+          "elapsedMs": 7574.987333966419,
+          "endToEndTps": 16.897718023374775,
+          "cachedTokens": 0,
+          "concurrency": 3,
+          "repeat": 1,
+          "finishReason": "length",
+          "jobId": 3
+        },
+        {
+          "inputTokens": 512,
+          "outputTokens": 128,
+          "ttftMs": 2115.227041998878,
+          "prefillTps": 363.28855612666285,
+          "decodeTps": 22.978868307020118,
+          "elapsedMs": 7655.699708964676,
+          "endToEndTps": 16.71956906174291,
+          "cachedTokens": 0,
+          "concurrency": 3,
+          "repeat": 1,
+          "finishReason": "length",
+          "jobId": 2
+        },
+        {
+          "inputTokens": 512,
+          "outputTokens": 128,
+          "ttftMs": 2203.11837492045,
+          "prefillTps": 612.9754450656674,
+          "decodeTps": 23.213794477493128,
+          "elapsedMs": 7670.462665962987,
+          "endToEndTps": 16.687389740906884,
+          "cachedTokens": 0,
+          "concurrency": 3,
+          "repeat": 1,
+          "finishReason": "length",
+          "jobId": 1
+        },
+        {
+          "inputTokens": 512,
+          "outputTokens": 128,
+          "ttftMs": 728.3247079467401,
+          "prefillTps": 732.9090477049353,
+          "decodeTps": 17.407096475748283,
+          "elapsedMs": 8025.439624907449,
+          "endToEndTps": 15.949282030948694,
+          "cachedTokens": 0,
+          "concurrency": 3,
+          "repeat": 2,
+          "finishReason": "length",
+          "jobId": 2
+        },
+        {
+          "inputTokens": 512,
+          "outputTokens": 128,
+          "ttftMs": 2126.7737499438226,
+          "prefillTps": 365.7438064643789,
+          "decodeTps": 21.260122622360793,
+          "elapsedMs": 8108.178999973461,
+          "endToEndTps": 15.786528639836265,
+          "cachedTokens": 0,
+          "concurrency": 3,
+          "repeat": 2,
+          "finishReason": "length",
+          "jobId": 1
+        },
+        {
+          "inputTokens": 512,
+          "outputTokens": 128,
+          "ttftMs": 2186.918083927594,
+          "prefillTps": 686.76528186886,
+          "decodeTps": 21.36341661252919,
+          "elapsedMs": 8131.702541955747,
+          "endToEndTps": 15.740861073013974,
+          "cachedTokens": 0,
+          "concurrency": 3,
+          "repeat": 2,
+          "finishReason": "length",
+          "jobId": 3
+        },
+        {
+          "inputTokens": 512,
+          "outputTokens": 128,
+          "ttftMs": 771.6966669540852,
+          "prefillTps": 680.2992253624055,
+          "decodeTps": 16.396577169328484,
+          "elapsedMs": 8520.239916979335,
+          "endToEndTps": 15.02305114025235,
+          "cachedTokens": 0,
+          "concurrency": 3,
+          "repeat": 3,
+          "finishReason": "length",
+          "jobId": 3
+        },
+        {
+          "inputTokens": 512,
+          "outputTokens": 128,
+          "ttftMs": 2376.208709087223,
+          "prefillTps": 319.0866145658054,
+          "decodeTps": 20.49048410624139,
+          "elapsedMs": 8575.98158402834,
+          "endToEndTps": 14.925405184915915,
+          "cachedTokens": 0,
+          "concurrency": 3,
+          "repeat": 3,
+          "finishReason": "length",
+          "jobId": 1
+        },
+        {
+          "inputTokens": 512,
+          "outputTokens": 128,
+          "ttftMs": 2478.0292080249637,
+          "prefillTps": 592.1053392405092,
+          "decodeTps": 20.713719756745903,
+          "elapsedMs": 8609.166749985889,
+          "endToEndTps": 14.867873246874886,
+          "cachedTokens": 0,
+          "concurrency": 3,
+          "repeat": 3,
+          "finishReason": "length",
+          "jobId": 2
+        }
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "concurrency": 3,
+      "repeat": 1,
+      "wallMs": 7677.001707954332,
+      "aggregateTps": 50.019527754191856
+    },
+    {
+      "concurrency": 3,
+      "repeat": 2,
+      "wallMs": 8132.459792075679,
+      "aggregateTps": 47.21818611069828
+    },
+    {
+      "concurrency": 3,
+      "repeat": 3,
+      "wallMs": 8612.362458952703,
+      "aggregateTps": 44.58706909168985
+    }
+  ]
+}
