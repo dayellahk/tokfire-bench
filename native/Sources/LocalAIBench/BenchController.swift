@@ -93,7 +93,7 @@ import UniformTypeIdentifiers
             try FileManager.default.createDirectory(at: reportsFolder, withIntermediateDirectories: true)
             let destination = reportsFolder.appendingPathComponent("benchmark-\(UUID().uuidString).json")
             let process = Process(); process.executableURL = URL(fileURLWithPath: python)
-            if backend == "oMLX" { process.arguments = ["-u", script.path, "--server", omlx, "--model", mlxModel!.path, "--output", destination.path] } else { process.arguments = ["-u", script.path] + (trial ? ["--trial"] : []) + ["--server", server, "--output", destination.path, "--models"] + models.map(\.path) }
+            if backend == "oMLX" { process.arguments = ["-B", "-u", script.path, "--server", omlx, "--model", mlxModel!.path, "--output", destination.path] } else { process.arguments = ["-B", "-u", script.path] + (trial ? ["--trial"] : []) + ["--server", server, "--output", destination.path, "--models"] + models.map(\.path) }
             let pipe = Pipe(); process.standardOutput = pipe; process.standardError = pipe
             runToken = UUID(); let token = runToken
             running = true; stopping = false; result = nil; report = nil; latest = nil; completedSamples = 0

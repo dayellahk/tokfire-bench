@@ -32,5 +32,8 @@ xattr -dr com.apple.ResourceFork "$bench_app" 2>/dev/null || true
 codesign --force --sign - "$bench_app"
 codesign --verify --strict "$bench_app"
 mkdir -p build
+# Replace the generated bundle so stale resources cannot invalidate its signature.
+rm -rf "$PWD/build/LocalAIBench.app"
 ditto --noextattr --norsrc "$bench_app" "$PWD/build/LocalAIBench.app"
+codesign --verify --strict "$PWD/build/LocalAIBench.app"
 printf 'Ad-hoc signed local developer app (not notarized): %s\n' "$PWD/build/LocalAIBench.app"

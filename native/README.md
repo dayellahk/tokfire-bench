@@ -57,7 +57,7 @@ Trials are stored separately from standard comparisons.
 The performance source's default filter excludes SpecPrefill, not all accelerators.
 Intelligence records identify author/model/task/score/sample coverage, not hardware.
 Re-fetch with `python scripts/import-omlx.py` from the project root, deploy, then
-use the authenticated reference-page import button. The importer is bounded and
+open the authenticated reference page; it imports automatically. Its refresh button can retry. The importer is bounded and
 idempotent, preserves source links/notes, and never treats external scores as local runs.
 
 ## Validation
