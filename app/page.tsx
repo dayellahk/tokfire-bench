@@ -1,47 +1,132 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useState } from "react";
-import { Activity, ArrowRight, Check, ChevronRight, Cpu, Database, Gauge, HardDrive, LockKeyhole, MemoryStick, Play, ShieldCheck, Sparkles, Trophy, Zap } from "lucide-react";
+import { useEffect, useState } from 'react';
+import { Activity, ArrowRight, Check, Cpu, Database, Download, FileUp, Gauge, LockKeyhole, ShieldCheck, Trash2, Trophy } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { BenchmarkReport, CONSENT_VERSION, MAX_REPORT_BYTES, reportSchema, summarize, responsiveness } from '@/lib/benchmark';
 
-type Model = { id: string; name: string; config: string; size: string; expected: number; ram: string; fit: "Excellent" | "Great" | "Usable" };
-const models: Model[] = [
-  { id: "qwen-8", name: "Qwen 3 8B", config: "Q4_K_M · MLX", size: "Small", expected: 62, ram: "6.1 GB", fit: "Excellent" },
-  { id: "gemma-12", name: "Gemma 3 12B", config: "Q4_K_M · MLX", size: "Medium", expected: 43, ram: "8.8 GB", fit: "Excellent" },
-  { id: "qwen-14", name: "Qwen 3 14B", config: "Q4_K_M · MLX", size: "Medium", expected: 35, ram: "10.4 GB", fit: "Great" },
-  { id: "gemma-27", name: "Gemma 3 27B", config: "Q4_K_M · llama.cpp", size: "Large", expected: 20, ram: "18.6 GB", fit: "Great" },
-  { id: "qwen-32", name: "Qwen 3 32B", config: "Q4_K_M · llama.cpp", size: "Large", expected: 16, ram: "22.2 GB", fit: "Usable" },
-];
-const seedLeaderboard = [
-  { hardware: "Mac Studio · M4 Max", memory: "128 GB", score: 9480, decode: 78.4, samples: 241 },
-  { hardware: "MacBook Pro · M4 Max", memory: "64 GB", score: 8790, decode: 66.8, samples: 584 },
-  { hardware: "MacBook Pro · M4 Pro", memory: "48 GB", score: 7640, decode: 47.2, samples: 916 },
-  { hardware: "Mac mini · M4 Pro", memory: "24 GB", score: 7210, decode: 43.5, samples: 463 },
-  { hardware: "MacBook Air · M3", memory: "24 GB", score: 5240, decode: 31.1, samples: 702 },
-];
-
-function Metric({ label, value, unit, note }: { label: string; value: string; unit?: string; note: string }) {
-  return <div className="metric"><div className="metric-label">{label}</div><div className="metric-value">{value}<small>{unit}</small></div><div className="metric-note">{note}</div></div>;
+type Tab = 'benchmark' | 'rankings' | 'privacy';
+type Ranking = {cohort:string; modelHash:string; inputTokens:number; chip:string; machine:string; cpuCores:number; memoryBytes:number; osVersion:string; runtimeHash:string; decodeTps:number; ttftMs:number; prefillTps:number; runs:number; contributors:number};
+type Submission = {id:string;runId:string;collectedAt:number;isPublic:number;reportJson:string};
+const gb=(n:number)=>`${(n/2**30).toFixed(1)} GiB`;
+const fmt=(n:number)=>n.toLocaleString(undefined,{maximumFractionDigits:1});
+async function api<T>(path:string, options?:RequestInit) {
+  const response=await fetch(path,options);
+  if(!response.headers.get('content-type')?.includes('application/json')) throw new Error('Please sign in to this website, then try again.');
+  const result=await response.json() as T & {error?:string};
+  if(!response.ok) throw new Error(result.error||'Request failed. Please try again.');
+  return result;
 }
 
 export default function Home() {
-  const [tab, setTab] = useState<"benchmark" | "rankings" | "privacy">("benchmark");
-  const [selected, setSelected] = useState(["qwen-8", "gemma-12", "qwen-14"]);
-  const [consent, setConsent] = useState(false);
-  const [running, setRunning] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [complete, setComplete] = useState(false);
-  const [shared, setShared] = useState(false);
-  const picked = useMemo(() => models.filter(m => selected.includes(m.id)), [selected]);
-  useEffect(() => { if (!running) return; const t = setInterval(() => setProgress(p => { if (p >= 100) { clearInterval(t); setRunning(false); setComplete(true); return 100; } return Math.min(100, p + 4); }), 90); return () => clearInterval(t); }, [running]);
-  const toggle = (id: string) => setSelected(s => s.includes(id) ? (s.length > 3 ? s.filter(x => x !== id) : s) : (s.length < 5 ? [...s, id] : s));
-  const start = () => { setComplete(false); setShared(false); setProgress(0); setRunning(true); };
-  const share = async () => { if (!consent) return; try { await fetch("/api/results", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ hardware: "MacBook Pro · M4 Pro", memoryGb: 48, score: 7640, modelCount: picked.length, decodeTps: 47.2, ttftMs: 312, prefillTps: 928 }) }); } finally { setShared(true); } };
+  const [tab,setTab]=useState<Tab>('benchmark');
+  const [report,setReport]=useState<BenchmarkReport|null>(null);
+  const [collect,setCollect]=useState(false),[publish,setPublish]=useState(false);
+  const [busy,setBusy]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState('');
+  const [submitted,setSubmitted]=useState(false);
+  const [rankings,setRankings]=useState<Ranking[]>([]),[cohort,setCohort]=useState('');
+  const [mine,setMine]=useState<Submission[]>([]),[loading,setLoading]=useState(false);
+  const [deleteId,setDeleteId]=useState<string|null>(null);
+  const rows=report?summarize(report):[];
+  const shortRows=rows.filter(r=>r.inputTokens===512).sort((a,b)=>b.decodeTps-a.decodeTps);
+  const best=shortRows[0];
+  const cohorts=Array.from(new Map(rankings.map(r=>[r.cohort,r])).values());
+  const selectedCohort=cohorts.some(r=>r.cohort===cohort)?cohort:cohorts[0]?.cohort;
+  const visible=rankings.filter(r=>r.cohort===selectedCohort).sort((a,b)=>b.decodeTps-a.decodeTps);
 
-  return <main className="app-shell"><aside className="sidebar"><div className="brand"><div className="brand-mark"><Activity size={19}/></div><div><b>LOCAL//AI</b><span>BENCH LAB</span></div></div><nav aria-label="Primary navigation"><button className={tab === "benchmark" ? "active" : ""} onClick={() => setTab("benchmark")}><Gauge/> Benchmark</button><button className={tab === "rankings" ? "active" : ""} onClick={() => setTab("rankings")}><Trophy/> Rankings</button><button className={tab === "privacy" ? "active" : ""} onClick={() => setTab("privacy")}><ShieldCheck/> Data & privacy</button></nav><div className="device-mini"><span className="status-dot"/> THIS MAC<div>Apple M4 Pro</div><small>48 GB unified memory</small></div><div className="side-foot"><span>Benchmark spec</span><b>v0.1.0</b></div></aside>
-    <section className="content"><header className="topbar"><div className="eyebrow">MACOS · APPLE SILICON</div><div className="top-actions"><span className="online"><i/> Engine ready</span><button className="icon-button" aria-label="System profile"><Cpu size={18}/></button></div></header>
-    {tab === "benchmark" && <><div className="intro"><div><div className="kicker">SYSTEM PROFILE / 01</div><h1>Your Mac, measured<br/><em>for local AI.</em></h1><p>Find the models that feel fast—not merely the ones that fit in memory.</p></div><div className="score-ring"><span>AI SCORE</span><b>{complete ? "7,640" : "—"}</b><small>{complete ? "TOP 18%" : "RUN TEST"}</small></div></div><div className="hardware-strip"><div><Cpu/><span>CHIP<b>Apple M4 Pro</b></span></div><div><Zap/><span>GPU<b>20 cores</b></span></div><div><MemoryStick/><span>MEMORY<b>48 GB</b></span></div><div><HardDrive/><span>AVAILABLE<b>312 GB</b></span></div></div>
-    {!complete ? <div className="workspace-grid"><section className="panel model-panel"><div className="panel-head"><div><span>02 / TEST SET</span><h2>Choose 3–5 models</h2></div><div className="counter">{selected.length}<small>/ 5</small></div></div><div className="model-list">{models.map(m => <button key={m.id} onClick={() => toggle(m.id)} className={`model-row ${selected.includes(m.id) ? "selected" : ""}`} aria-pressed={selected.includes(m.id)}><span className="check">{selected.includes(m.id) && <Check size={15}/>}</span><span className="model-name"><b>{m.name}</b><small>{m.config}</small></span><span className="size-tag">{m.size}</span><span className="expected"><b>~{m.expected}</b><small>tok/s</small></span><ChevronRight size={17}/></button>)}</div></section><aside className="panel run-panel"><span className="panel-index">03 / RUN</span><h2>{running ? "Benchmarking…" : "Ready when you are."}</h2><p>{running ? `Testing ${picked[Math.min(picked.length - 1, Math.floor(progress / (101 / picked.length)))]?.name}` : `A standard ${picked.length}-model pass takes about 8–14 minutes. Models are downloaded only when needed.`}</p>{running && <div className="progress-wrap"><div className="progress-label"><span>PROGRESS</span><b>{progress}%</b></div><div className="progress"><i style={{width:`${progress}%`}}/></div><div className="run-stages"><span className={progress > 10 ? "done" : ""}>Load</span><span className={progress > 35 ? "done" : ""}>Prefill</span><span className={progress > 65 ? "done" : ""}>Decode</span><span className={progress > 90 ? "done" : ""}>Sustain</span></div></div>}<button className="run-button" disabled={running} onClick={start}>{running ? <Activity className="spin"/> : <Play size={18} fill="currentColor"/>}{running ? "Running test" : "Run benchmark"}<ArrowRight size={18}/></button><div className="run-note"><LockKeyhole size={15}/><span>Results stay on this Mac unless you choose to contribute them.</span></div></aside></div> : <section className="results"><div className="results-head"><div><span className="success-label"><Check/> TEST COMPLETE</span><h2>M4 Pro is excellent for<br/>8B–27B models.</h2><p>32B Q4 is usable for quality-first work, but 14B offers the best balance.</p></div><button className="secondary-button" onClick={() => setComplete(false)}>Run again</button></div><div className="metrics-grid"><Metric label="DECODE" value="47.2" unit=" tok/s" note="Interactive chat"/><Metric label="TTFT" value="312" unit=" ms" note="Very responsive"/><Metric label="PREFILL" value="928" unit=" tok/s" note="Long prompts"/><Metric label="PEAK MEMORY" value="24.8" unit=" GB" note="23.2 GB headroom"/></div><div className="recommendation"><Sparkles/><div><span>BEST MATCH</span><h3>Qwen 3 14B · Q4_K_M</h3><p>Fast enough for fluid conversation, with enough capability for coding and daily knowledge work.</p></div><b>94<small>/100</small></b></div><div className="share-card"><div><Database/><div><h3>Improve the public benchmark database</h3><p>Share hardware and performance measurements only. Prompts, model outputs, filenames, serial numbers and Apple ID are never collected.</p></div></div><label className="consent"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)}/><span><i/></span><b>Allow anonymous contribution</b></label><button disabled={!consent || shared} onClick={share}>{shared ? "Contributed — thank you" : "Contribute this result"}</button></div></section>}</>}
-    {tab === "rankings" && <section className="page-section"><div className="kicker">COMMUNITY DATA / LIVE</div><div className="section-title"><div><h1>Mac AI rankings.</h1><p>Comparable runs using the same workload, model configuration and benchmark spec.</p></div><div className="sample-count"><b>12,486</b><span>VERIFIED RUNS</span></div></div><div className="rank-table"><div className="rank-header"><span>RANK</span><span>HARDWARE</span><span>AI SCORE</span><span>AVG. DECODE</span><span>SAMPLES</span></div>{seedLeaderboard.map((r,i)=><div className="rank-row" key={r.hardware}><b className="rank">0{i+1}</b><span className="hw"><b>{r.hardware}</b><small>{r.memory}</small></span><b className="rank-score">{r.score.toLocaleString()}</b><span>{r.decode} tok/s</span><span>{r.samples}</span></div>)}</div><div className="method-note"><ShieldCheck/><div><b>Comparable by design</b><p>Scores are grouped by chip, memory, OS, runtime, model, quantization and workload. Outliers and incomplete runs are excluded.</p></div></div></section>}
-    {tab === "privacy" && <section className="page-section privacy-page"><div className="kicker">YOUR DATA / YOUR CHOICE</div><h1>Private by default.</h1><p className="lead">Benchmarking happens locally. Nothing leaves your Mac until you explicitly allow a contribution.</p><div className="privacy-grid"><div className="privacy-card allow"><Check/><span>COLLECTED WITH CONSENT</span><h3>Machine + performance</h3><ul><li>Chip model and core counts</li><li>Unified memory capacity</li><li>macOS and runtime versions</li><li>Model configuration and metrics</li><li>Thermal and power measurements</li></ul></div><div className="privacy-card never"><LockKeyhole/><span>NEVER COLLECTED</span><h3>Your personal content</h3><ul><li>Prompts or model responses</li><li>Files, paths or filenames</li><li>Serial number or Apple ID</li><li>IP address in published data</li><li>Any result without opt-in</li></ul></div></div><div className="control-box"><div><Database/><span><b>Anonymous contribution</b><small>You can change this before every upload.</small></span></div><label className="consent large"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)}/><span><i/></span><b>{consent ? "Allowed" : "Off"}</b></label></div></section>}
-    </section></main>;
+  useEffect(()=>{
+    if(tab==='benchmark') return;
+    let cancelled=false;
+    const request = tab==='rankings'
+      ? api<{results:Ranking[]}>('/api/v1/leaderboard').then(data=>{if(!cancelled)setRankings(data.results);})
+      : api<{results:Submission[]}>('/api/v1/submissions').then(data=>{if(!cancelled)setMine(data.results);});
+    request.catch(e=>{if(!cancelled)setError(e.message);}).finally(()=>{if(!cancelled)setLoading(false);});
+    return ()=>{cancelled=true;};
+  },[tab]);
+
+  async function importFile(file?:File) {
+    if(!file)return;
+    setError('');setMessage('');
+    try {
+      if(file.size>MAX_REPORT_BYTES)throw new Error('Report is too large. Maximum size is 200 KB.');
+      const parsed=reportSchema.safeParse(JSON.parse(await file.text()));
+      if(!parsed.success)throw new Error('This file is not a complete v1 benchmark report. Use the current native runner. Extra fields and incomplete runs are rejected.');
+      setReport(parsed.data);setCollect(false);setPublish(false);setSubmitted(false);
+      setMessage('Report opened locally in this browser. Nothing has been uploaded.');
+    } catch(e) {setError(e instanceof Error?e.message:'Could not read report');}
+  }
+  async function upload() {
+    if(!report||!collect||busy)return;
+    setBusy(true);setError('');setMessage('');
+    try {
+      const result=await api<{published:boolean}>('/api/v1/submissions',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({report,consent:{collect:true,publish,version:CONSENT_VERSION}})});
+      setSubmitted(true);setMessage(result.published?'Saved and included in the community comparison.':'Saved privately. Excluded from the community comparison.');
+    } catch(e) {setError(e instanceof Error?e.message:'Upload failed');} finally {setBusy(false);}
+  }
+  async function manage(id:string, action:'publish'|'hide'|'delete') {
+    setBusy(true);setError('');setMessage('');
+    try {
+      await api(`/api/v1/submissions/${id}`,action==='delete'?{method:'DELETE'}:{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({publish:action==='publish',version:CONSENT_VERSION})});
+      setMine((await api<{results:Submission[]}>('/api/v1/submissions')).results);setDeleteId(null);
+      setMessage(action==='delete'?'Deleted from the active database and community comparison.':action==='hide'?'Removed from community comparison. The private record is retained.':'Included in the community comparison.');
+    } catch(e) {setError(e instanceof Error?e.message:'Update failed');} finally {setBusy(false);}
+  }
+
+  return <main className="app-shell">
+    <aside className="sidebar">
+      <div className="brand"><div className="brand-mark"><Activity size={19}/></div><div><b>LOCAL//AI</b><span>BENCH LAB</span></div></div>
+      <nav aria-label="Primary navigation">{([['benchmark','Benchmark',Gauge],['rankings','Comparisons',Trophy],['privacy','My data',ShieldCheck]] as const).map(([id,label,Icon])=><button key={id} aria-label={label} aria-current={tab===id?'page':undefined} className={tab===id?'active':''} onClick={()=>{if(id===tab)return;setTab(id);setLoading(id!=='benchmark');setError('');setMessage('');}}><Icon/>{label}</button>)}</nav>
+      <div className="device-mini"><LockKeyhole size={14}/> LOCAL FIRST<div>Developer alpha</div><small>Measured on your Mac</small></div>
+      <div className="side-foot"><span>Text suite</span><b>v1</b></div>
+    </aside>
+    <section className="content">
+      <header className="topbar"><div className="eyebrow">MACOS · APPLE SILICON</div><span className="alpha-badge">NATIVE ALPHA / 0.2</span></header>
+      {error&&<div role="alert" className="notice error">{error}</div>}
+      {message&&<div role="status" className="notice">{message}</div>}
+      {tab==='benchmark'&&<>
+        <div className="intro"><div><div className="kicker">BENCHMARK / REAL MEASUREMENTS</div><h1>Your Mac, measured<br/><em>for local AI.</em></h1><p>Run the native benchmark on your Mac. Review the measurements here and choose what to share.</p></div><div className="score-ring"><Cpu size={30}/><b>{report?report.models.length:'3–5'}</b><small>MODELS PER TEST</small></div></div>
+        <div className="notice subtle">This website does not run models or detect your Mac. No demo scores are included. Native compilation and Apple Silicon validation are still required for this alpha.</div>
+        <div className="workspace-grid">
+          <section className="panel setup-panel"><div className="panel-head"><div><span>01 / ON YOUR MAC</span><h2>Run a reproducible test</h2></div><Cpu/></div>
+            <ol className="steps"><li><b>Build the native alpha</b><p>Download the source package. Follow its README to install the runtime and build with Xcode’s command-line tools.</p></li><li><b>Select 3–5 local GGUF models</b><p>Models load one at a time. The app performs warm-ups and three measured runs per workload.</p></li><li><b>Export your JSON report</b><p>Two prompt lengths, fixed output length, actual token counts and exact model hashes. No automatic upload.</p></li></ol>
+            <a className="download-link" href="/local-ai-native-source.zip" download><Download size={17}/>Download macOS source<ArrowRight size={16}/></a>
+            <a className="text-link" href="/methodology">Read the methodology & limitations</a>
+          </section>
+          <aside className="panel run-panel"><span className="panel-index">02 / REVIEW</span><h2>Bring your results.</h2><p>Open the report exported by the native app. It is validated locally before you decide whether to upload it.</p>
+            <label className="file-picker"><FileUp size={22}/><b>Choose a benchmark report</b><small>JSON · up to 200 KB</small><input type="file" accept="application/json,.json" disabled={busy} onChange={e=>{void importFile(e.target.files?.[0]);e.target.value='';}}/></label>
+            <div className="run-note"><LockKeyhole size={15}/><span>Choosing a file does not send it to the server.</span></div>
+          </aside>
+        </div>
+        {report&&<section className="results imported">
+          <div className="hardware-strip"><div><Cpu/><span>CHIP<b>{report.hardware.chip}</b></span></div><div><Activity/><span>CPU<b>{report.hardware.cpuCores} cores</b></span></div><div><Database/><span>MEMORY<b>{gb(report.hardware.memoryBytes)}</b></span></div><div><Check/><span>MEASURED<b>{new Date(report.measuredAt).toLocaleDateString()}</b></span></div></div>
+          <div className="results-head"><div><span className="success-label">LOCAL REPORT / {report.models.length} MODELS</span><h2>Measured performance.</h2><p>Each row shows the median of three runs. Hashes identify the exact model files; these are user-submitted measurements, not independently verified scores.</p></div></div>
+          <div className="table-scroll"><table><caption className="sr-only">Local benchmark results</caption><thead><tr><th>Model hash</th><th>Input tokens</th><th>Decode</th><th>TTFT</th><th>Prefill</th><th>Process RSS</th><th>Response rating</th></tr></thead><tbody>{rows.map(r=><tr key={`${r.modelHash}:${r.inputTokens}`}><td><code title={r.modelHash}>{r.modelHash.slice(0,12)}</code></td><td>{r.inputTokens}</td><td>{fmt(r.decodeTps)} tok/s</td><td>{fmt(r.ttftMs)} ms</td><td>{fmt(r.prefillTps)} tok/s</td><td>{r.peakRssBytes?gb(r.peakRssBytes):'Unavailable'}</td><td>{responsiveness(r.decodeTps,r.ttftMs)}</td></tr>)}</tbody></table></div>
+          {best&&<div className="recommendation"><Gauge/><div><span>FASTEST OF YOUR SELECTED MODELS · 512 INPUT TOKENS</span><h3>{best.modelHash.slice(0,12)} · {fmt(best.decodeTps)} tok/s</h3><p>This is a speed recommendation. It does not measure answer quality, coding ability, or long-duration thermal performance.</p></div></div>}
+          <div className="consent-panel"><span className="panel-index">03 / YOUR CHOICE</span><h2>Save privately or contribute.</h2><p>Uploads contain the hardware fields above, OS version, runtime/model hashes, run ID, timestamps and timing samples. The server links your submission to your signed-in account for ownership and deletion. Your identity is not displayed in comparisons. This is pseudonymous, not fully anonymous.</p>
+            <label className="checkbox-line"><input type="checkbox" checked={collect} disabled={busy||submitted} onChange={e=>{setCollect(e.target.checked);if(!e.target.checked)setPublish(false);}}/><span>I allow collection and storage of this report under policy {CONSENT_VERSION}.</span></label>
+            <label className="checkbox-line"><input type="checkbox" checked={publish} disabled={!collect||busy||submitted} onChange={e=>setPublish(e.target.checked)}/><span>I also allow these measurements and hardware details to appear in community comparisons when site access permits.</span></label>
+            <div className="actions"><Button className="primary-action" disabled={!collect||busy||submitted} onClick={upload}>{busy?'Saving…':submitted?'Saved':publish?'Save & contribute':'Save privately'}</Button><Button className="secondary-button" disabled={busy} onClick={()=>{setReport(null);setCollect(false);setPublish(false);setMessage('Local report closed. Existing server records, if any, are managed in My data.');}}>Close local report</Button></div>
+            <details><summary>Inspect the exact report</summary><pre>{JSON.stringify(report,null,2)}</pre></details>
+          </div>
+        </section>}
+      </>}
+      {tab==='rankings'&&<section className="page-section"><div className="kicker">COMMUNITY / OPT-IN RESULTS</div><div className="section-title"><div><h1>Compare like with like.</h1><p>Compare the same model file, runtime build and workload. These submissions have passed format validation; they have not been independently verified.</p></div></div>
+        {loading?<p role="status">Loading measurements…</p>:!rankings.length?<div className="empty-state"><Database/><h2>No contributed measurements yet.</h2><p>Run the native benchmark, then explicitly allow publication when submitting. Private reports never appear here.</p></div>:<>
+          <label className="cohort-picker">Choose a comparison group<select value={selectedCohort} onChange={e=>setCohort(e.target.value)}>{cohorts.map(r=><option key={r.cohort} value={r.cohort}>{r.modelHash.slice(0,10)} · {r.inputTokens} input · runtime {r.runtimeHash.slice(0,8)} · group {r.cohort.slice(0,6)}</option>)}</select></label>
+          <div className="table-scroll"><table><thead><tr><th>Hardware</th><th>Memory</th><th>macOS</th><th>Decode</th><th>TTFT</th><th>Prefill</th><th>Runs / people</th></tr></thead><tbody>{visible.map((r,i)=><tr key={i}><td><b>{r.chip}</b><small>{r.machine} · {r.cpuCores} CPU cores</small></td><td>{gb(r.memoryBytes)}</td><td>{r.osVersion}</td><td>{fmt(r.decodeTps)} tok/s</td><td>{fmt(r.ttftMs)} ms</td><td>{fmt(r.prefillTps)} tok/s</td><td>{r.runs} / {r.contributors}</td></tr>)}</tbody></table></div>
+          <p className="fine-print">Mean of per-report medians, grouped by exact hardware, OS and comparison group. The first 500 groups are shown. Repeated reports can bias averages; contributor counts are shown. This alpha has no anti-cheat attestation or official overall score.</p>
+        </>}
+        <div className="method-note"><ShieldCheck/><div><b>Measured evidence before a global score</b><p>There is no verified reference fleet yet. We will calibrate hardware predictions and a fixed standard suite before publishing an overall AI score.</p></div></div>
+      </section>}
+      {tab==='privacy'&&<section className="page-section privacy-page"><div className="kicker">YOUR DATA / YOUR CHOICE</div><h1>Private by default.</h1><p className="lead">Collection and publication are separate choices. You can hide a contribution or delete the stored report.</p>
+        <div className="privacy-grid"><div className="privacy-card allow"><Database/><span>ONLY AFTER YOU SUBMIT</span><h3>Measurements + hardware</h3><ul><li>Chip, machine identifier, CPU cores and memory</li><li>macOS, exact runtime/model hashes</li><li>Timing samples, token counts and process RSS</li><li>Measurement timestamp and random run ID</li><li>Account ownership and consent timestamps</li></ul></div><div className="privacy-card never"><LockKeyhole/><span>EXCLUDED FROM THE REPORT</span><h3>Your personal content</h3><ul><li>Prompts and generated responses</li><li>Model names, files and local paths</li><li>Serial number and Apple ID</li><li>Account identity in public comparisons</li><li>IP address in the benchmark dataset</li></ul></div></div>
+        <p className="fine-print">The hosting provider processes network requests and authentication separately. We do not claim that infrastructure has no access logs. Rare hardware combinations may be recognizable. Deletion removes active records; it cannot retract copies already downloaded by visitors or promise immediate erasure of provider backups.</p>
+        <h2 className="my-title">My submissions</h2>{loading?<p>Loading your reports…</p>:mine.length===0?<div className="empty-state">No saved reports for this account.</div>:mine.map(s=>{
+          const data=JSON.parse(s.reportJson) as BenchmarkReport;
+          return <article className="saved-row" key={s.id}><div><b>{data.hardware.chip} · {data.models.length} models</b><small>{new Date(s.collectedAt).toLocaleString()} · {s.isPublic?'Contributed':'Private'} · {s.runId.slice(0,8)}</small></div><div className="actions"><Button className="secondary-button" disabled={busy} onClick={()=>manage(s.id,s.isPublic?'hide':'publish')}>{s.isPublic?'Withdraw publication':'Allow publication'}</Button><Button className="secondary-button" disabled={busy} onClick={()=>setDeleteId(s.id)}><Trash2 size={15}/>Delete</Button></div>{deleteId===s.id&&<div className="delete-confirm" role="alert"><p>Delete this stored report and all its comparison measurements? Your local Mac copy is unaffected.</p><Button className="danger-action" disabled={busy} onClick={()=>manage(s.id,'delete')}>Delete permanently</Button><Button className="secondary-button" disabled={busy} onClick={()=>setDeleteId(null)}>Cancel</Button></div>}</article>;
+        })}
+        <a className="text-link" href="/signin-with-chatgpt?return_to=/" target="_top">Sign in to manage your submissions</a>
+      </section>}
+    </section>
+  </main>;
 }

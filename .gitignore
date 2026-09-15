@@ -44,3 +44,9 @@ next-env.d.ts
 /.codex/
 /outputs/
 /work/
+/native/.build/
+/native/.swiftpm/
+__pycache__/
+*.pyc
+*.tsbuildinfo
+/native/build/

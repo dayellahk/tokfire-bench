@@ -1,0 +1,16 @@
+name: Native alpha build
+on:
+  workflow_dispatch:
+  push:
+    paths: ['native/**', '.github/workflows/native-build.yml']
+jobs:
+  compile:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build SwiftUI executable
+        working-directory: native
+        run: swift build --configuration release
+      - name: Run runner protocol tests
+        working-directory: native
+        run: python3 -m unittest discover -s Tests -v
