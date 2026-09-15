@@ -5,7 +5,7 @@ swift build --scratch-path .build-release --configuration release
 bench_bin="$(swift build --scratch-path .build-release --configuration release --show-bin-path)"
 bench_stage="$(mktemp -d /private/tmp/localai-app.XXXXXX)"
 trap 'rm -rf "$bench_stage"' EXIT
-bench_app="$bench_stage/LocalAIBench.app"
+bench_app="$bench_stage/TokFire Bench.app"
 mkdir -p "$bench_app/Contents/MacOS" "$bench_app/Contents/Resources"
 cp "$bench_bin/LocalAIBench" "$bench_app/Contents/MacOS/LocalAIBench"
 cp Sources/LocalAIBench/Resources/*.py Sources/LocalAIBench/Resources/languages.json Sources/LocalAIBench/Resources/lemon-squeezy.json "$bench_app/Contents/Resources/"
@@ -16,11 +16,13 @@ cat > "$bench_app/Contents/Info.plist" <<'PLIST'
 <plist version="1.0"><dict>
 <key>CFBundleExecutable</key><string>LocalAIBench</string>
 <key>CFBundleIdentifier</key><string>dev.localaibench.alpha</string>
-<key>CFBundleName</key><string>Local AI Bench</string>
+<key>CFBundleName</key><string>TokFire Bench</string>
+<key>CFBundleDisplayName</key><string>TokFire Bench</string>
+<key>NSHumanReadableCopyright</key><string>TokFire Labs</string>
 <key>CFBundleIconFile</key><string>AppIcon</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.5.0</string>
-<key>CFBundleVersion</key><string>6</string>
+<key>CFBundleShortVersionString</key><string>0.5.1</string>
+<key>CFBundleVersion</key><string>7</string>
 <key>LSMinimumSystemVersion</key><string>13.0</string>
 <key>NSHighResolutionCapable</key><true/>
 </dict></plist>
@@ -33,7 +35,9 @@ codesign --force --sign - "$bench_app"
 codesign --verify --strict "$bench_app"
 mkdir -p build
 # Replace the generated bundle so stale resources cannot invalidate its signature.
-rm -rf "$PWD/build/LocalAIBench.app"
-ditto --noextattr --norsrc "$bench_app" "$PWD/build/LocalAIBench.app"
-codesign --verify --strict "$PWD/build/LocalAIBench.app"
-printf 'Ad-hoc signed local developer app (not notarized): %s\n' "$PWD/build/LocalAIBench.app"
+rm -rf "$PWD/build/TokFire Bench.app"
+ditto --noextattr --norsrc "$bench_app" "$PWD/build/TokFire Bench.app"
+xattr -dr com.apple.FinderInfo "$PWD/build/TokFire Bench.app" 2>/dev/null || true
+xattr -dr com.apple.ResourceFork "$PWD/build/TokFire Bench.app" 2>/dev/null || true
+codesign --verify --strict "$PWD/build/TokFire Bench.app"
+printf 'Ad-hoc signed local developer app (not notarized): %s\n' "$PWD/build/TokFire Bench.app"

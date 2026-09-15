@@ -1,7 +1,7 @@
 """Opt-in real Mac GUI lifecycle test; uses the app’s visible upload setting."""
 import json, pathlib, subprocess, time, os
 root=pathlib.Path(__file__).resolve().parents[1]
-app=root/'build/LocalAIBench.app/Contents/MacOS/LocalAIBench'
+app=root/'build/TokFire Bench.app/Contents/MacOS/LocalAIBench'
 model=pathlib.Path.home()/'Library/Application Support/LocalAIBench/Models/MiniCPM5-2B-Q4_K_M.gguf'
 engine=os.environ.get('LOCALAI_ENGINE','llama')
 folder=root/('build/v0.5-lifecycle-'+engine)

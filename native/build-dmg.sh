@@ -4,13 +4,14 @@ cd "$(dirname "$0")"
 bash build-app.sh
 bench_stage="$(mktemp -d /private/tmp/localai-dmg.XXXXXX)"
 trap 'rm -rf "$bench_stage"' EXIT
-ditto --noextattr --norsrc build/LocalAIBench.app "$bench_stage/LocalAIBench.app"
-codesign --verify --strict "$bench_stage/LocalAIBench.app"
+ditto --noextattr --norsrc "build/TokFire Bench.app" "$bench_stage/TokFire Bench.app"
+codesign --verify --strict "$bench_stage/TokFire Bench.app"
 ln -s /Applications "$bench_stage/Applications"
 cat > "$bench_stage/READ ME.txt" <<'README'
-Local AI Bench 0.5.0 — Apple Silicon local developer build
+TokFire Bench 0.5.1 — by TokFire Labs · tokfires.com
+Apple Silicon local developer build
 
-Drag LocalAIBench.app to Applications, then open it.
+Drag TokFire Bench.app to Applications, then open it.
 This app is ad-hoc signed, not Developer ID signed or notarized.
 
 External requirements: Python 3.10+ and llama.cpp or oMLX.
@@ -42,8 +43,8 @@ Your existing oMLX service/configuration is not modified.
 Settings includes 20 interface languages. Technical runtime logs and the
 website authentication pages retain their own language.
 README
-bench_dmg="$PWD/build/LocalAIBench-0.5.0-macos-arm64.dmg"
-hdiutil create -volname "Local AI Bench" -srcfolder "$bench_stage" -ov -format UDZO "$bench_dmg"
+bench_dmg="$PWD/build/TokFireBench-0.5.1-macos-arm64.dmg"
+hdiutil create -volname "TokFire Bench" -srcfolder "$bench_stage" -ov -format UDZO "$bench_dmg"
 hdiutil verify "$bench_dmg"
 shasum -a 256 "$bench_dmg" > "$bench_dmg.sha256"
 printf 'Developer DMG: %s\n' "$bench_dmg"

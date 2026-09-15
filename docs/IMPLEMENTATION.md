@@ -1,4 +1,4 @@
-# Local AI Benchmark Lab — implementation checkpoint
+# TokFire Bench — implementation checkpoint
 
 ## Delivered in alpha 0.2
 

@@ -1,4 +1,4 @@
-# Local AI Bench 0.5.0 (macOS Apple Silicon)
+# TokFire Bench 0.5.1 (macOS Apple Silicon)
 
 A native SwiftUI benchmark lab with a live Hugging Face GGUF catalogue,
 hardware capacity estimates, visible progress, local history, readable assessments,
@@ -107,3 +107,6 @@ Deactivation releases this Mac’s activation instance. Offline use remains avai
 Lemon Squeezy product configuration is in `Sources/LocalAIBench/Resources/lemon-squeezy.json`.
 Zero store/product/variant IDs disable purchases and activation; it never unlocks Pro.
 See `../docs/LEMON-SQUEEZY-SETUP.md` for the seller setup and outstanding live checks.
+
+Brand: TokFire. Company: TokFire Labs. Domain: tokfires.com (DNS setup pending).
+The existing Application Support/LocalAIBench path, Keychain service and module names are retained for upgrade compatibility.

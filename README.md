@@ -1,4 +1,4 @@
-# Local AI Benchmark Lab
+# TokFire Bench
 
 A macOS local-LLM benchmark alpha and a website for consent-controlled result storage and comparisons.
 

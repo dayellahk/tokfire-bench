@@ -124,7 +124,7 @@ struct ProPanel: View {
     @ObservedObject private var lang=LanguageStore.shared
     var body: some View {
         VStack(alignment:.leading,spacing:12){
-            HStack{Label("Local AI Bench Pro",systemImage:"bolt.fill").font(.headline);Spacer();Tag(text:store.active ? "Pro · 20 jobs" : "Free · 3 jobs")}
+            HStack{Label("TokFire Bench Pro",systemImage:"bolt.fill").font(.headline);Spacer();Tag(text:store.active ? "Pro · 20 jobs" : "Free · 3 jobs")}
             Text(L("proHelp")).font(.callout)
             Text(L(store.status)).font(.caption).foregroundColor(store.active ? accent : muted)
             if store.configuration.configured {

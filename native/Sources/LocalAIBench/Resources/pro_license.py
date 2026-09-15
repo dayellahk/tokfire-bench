@@ -15,7 +15,7 @@ def validate_response(value, cfg, credential):
     for field,setting in [('store_id','storeId'),('product_id','productId'),('variant_id','variantId')]:
         expected=cfg.get(setting)
         if type(expected) is not int or expected<=0 or type(meta.get(field)) is not int or meta[field]!=expected:
-            raise ValueError('This license is not for Local AI Bench Pro.')
+            raise ValueError('This license is not for TokFire Bench Pro.')
     return True
 
 def verify_license(serialized):

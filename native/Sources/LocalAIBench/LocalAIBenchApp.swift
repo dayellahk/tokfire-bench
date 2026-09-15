@@ -5,7 +5,7 @@ import AppKit
     @StateObject private var bench = BenchController()
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     var body: some Scene {
-        WindowGroup {
+        WindowGroup("TokFire Bench") {
             WorkspaceView(bench: bench)
                 .frame(minWidth: 1080, minHeight: 760)
                 .onAppear { delegate.bench = bench; NSApp.activate(ignoringOtherApps: true) }
@@ -33,9 +33,9 @@ enum Page: String, CaseIterable {
     case discover, benchmark, history, settings
     var icon: String { switch self { case .discover: return "square.grid.2x2"; case .benchmark: return "waveform.path.ecg"; case .history: return "clock.arrow.circlepath"; case .settings: return "slider.horizontal.3" } }
 }
-let ink = Color(red: 0.09, green: 0.16, blue: 0.22)
+let ink = Color(red: 0.12, green: 0.10, blue: 0.10)
 let muted = Color(red: 0.40, green: 0.46, blue: 0.50)
-let accent = Color(red: 0.02, green: 0.48, blue: 0.43)
+let accent = Color(red: 0.72, green: 0.23, blue: 0.06)
 let canvas = Color(red: 0.95, green: 0.965, blue: 0.96)
 struct Panel<Content: View>: View {
     var title: String? = nil
@@ -64,7 +64,7 @@ struct WorkspaceView: View {
             sidebar
             ScrollViewReader { proxy in
                 ScrollView { VStack(alignment: .leading, spacing: 24) {
-                    HStack { Text("LOCAL AI / BENCHMARK LAB").font(.system(size: 10, weight: .semibold, design: .monospaced)).tracking(1.5).foregroundColor(accent); Spacer(); Tag(text: "v0.5.0 · Apple Silicon") }
+                    HStack { Text("TOKFIRE BENCH / TOKFIRE LABS").font(.system(size: 10, weight: .semibold, design: .monospaced)).tracking(1.5).foregroundColor(accent); Spacer(); Tag(text: "v0.5.1 · Apple Silicon") }
                     VStack(alignment: .leading, spacing: 9) { Text(L(page == .discover ? "headline" : page.rawValue)).font(.system(size: 30, weight: .bold)); Text(L("subhead")).foregroundColor(muted) }
                     switch page { case .discover: discovery; case .benchmark: benchmark; case .history: history; case .settings: settings }
                     Label(L("privacy"), systemImage: "lock.shield").font(.caption).foregroundColor(muted)
@@ -99,17 +99,19 @@ struct WorkspaceView: View {
     private var phase: String { L(["準備就緒":"ready","檢查環境":"inspecting","驗證模型":"hashing","載入模型":"loading","準備工作負載":"inspecting","暖機中":"warmup","量度中":"measuring","關閉模型":"stopping","已停止":"stopped","正在停止":"stopping","測試失敗":"failed","測試完成":"complete","需要設定":"settings","無法啟動":"failed"][bench.phase] ?? "ready") }
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 28) {
-            Label("LOCAL / AI", systemImage: "waveform.path").font(.title2.bold()).padding(.top, 20)
+            Label("TokFire", systemImage: "flame.fill").font(.title2.bold()).padding(.top, 20)
+            Text("TokFire Bench").font(.caption).foregroundColor(.white.opacity(0.7))
             ForEach(Page.allCases, id: \.self) { item in Button { page = item } label: { HStack { Image(systemName: item.icon).frame(width: 20); Text(L(item.rawValue)); Spacer() }.padding(13).background(page == item ? .white.opacity(0.14) : .clear, in: RoundedRectangle(cornerRadius: 12)) }.buttonStyle(.plain).foregroundColor(page == item ? .white : .white.opacity(0.6)) }
             Spacer()
-            if bench.running { Text(phase); ProgressView(value: bench.progress).tint(.mint); Text("\(bench.completedSamples) / \(bench.totalSamples)").font(.caption) }
+            if bench.running { Text(phase); ProgressView(value: bench.progress).tint(.orange); Text("\(bench.completedSamples) / \(bench.totalSamples)").font(.caption) }
+            Text("TokFire Labs · tokfires.com").font(.system(size: 10)).foregroundColor(.white.opacity(0.6))
             Text(catalog.device.chip).font(.headline)
             Text("\(Int(catalog.device.memoryGiB)) GiB · \(catalog.device.cores) CPU").font(.caption).opacity(0.6)
-            Toggle(L("online"), isOn: Binding(get: { catalog.online }, set: { catalog.setOnline($0) })).toggleStyle(.switch).font(.caption).tint(.mint)
+            Toggle(L("online"), isOn: Binding(get: { catalog.online }, set: { catalog.setOnline($0) })).toggleStyle(.switch).font(.caption).tint(.orange)
         }.padding(20).frame(width: 220).frame(maxHeight: .infinity).foregroundColor(.white).background(ink)
     }
     private var deviceHero: some View {
-        HStack(spacing: 25) { Image(systemName: "cpu").font(.system(size: 40)).foregroundColor(.mint); VStack(alignment: .leading, spacing: 8) { Text(L("device")).font(.caption).opacity(0.6); Text(catalog.device.chip).font(.title2.bold()); Text("\(L("cores")): \(catalog.device.cores) · \(L("memory")): \(Int(catalog.device.memoryGiB)) GiB") }; Spacer(); Text(L("smallModels")).font(.callout).frame(maxWidth: 230) }.padding(25).foregroundColor(.white).background(LinearGradient(colors: [ink, Color(red: 0.07, green: 0.31, blue: 0.31)], startPoint: .leading, endPoint: .trailing), in: RoundedRectangle(cornerRadius: 19))
+        HStack(spacing: 25) { Image(systemName: "cpu").font(.system(size: 40)).foregroundColor(.orange); VStack(alignment: .leading, spacing: 8) { Text(L("device")).font(.caption).opacity(0.6); Text(catalog.device.chip).font(.title2.bold()); Text("\(L("cores")): \(catalog.device.cores) · \(L("memory")): \(Int(catalog.device.memoryGiB)) GiB") }; Spacer(); Text(L("smallModels")).font(.callout).frame(maxWidth: 230) }.padding(25).foregroundColor(.white).background(LinearGradient(colors: [ink, Color(red: 0.36, green: 0.16, blue: 0.10)], startPoint: .leading, endPoint: .trailing), in: RoundedRectangle(cornerRadius: 19))
     }
     private var discovery: some View {
         VStack(alignment: .leading, spacing: 20) {

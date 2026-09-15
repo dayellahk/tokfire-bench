@@ -1,12 +1,12 @@
 # Lemon Squeezy Pro — seller setup
 
-**Local AI Bench Pro — HK$180, one-time purchase.**
+**TokFire Bench Pro — HK$180, one-time purchase.**
 Free: 1–3 simultaneous jobs. Pro: 4–20 jobs calling **the same local model**.
 Both llama.cpp/GGUF and oMLX/MLX are supported.
 
 ## Ready-to-use product description
 
-Measure how your Mac handles simultaneous AI requests. Local AI Bench Pro
+Measure how your Mac handles simultaneous AI requests. TokFire Bench Pro
 unlocks 4–20 benchmark jobs on one local model. See each job’s token speed,
 time to first token, total throughput and a saved assessment report. Choose
 from 20 interface languages. Pay once; no subscription.
@@ -72,7 +72,7 @@ can be modified; the app does not claim to prevent deliberate patching.
 
 ## Current external setup — 2026-09-16
 
-Dayella Limited retains HKD. **Local AI Bench Pro** is published in **test mode**:
+Dayella Limited retains HKD. **TokFire Bench Pro** is published in **test mode**:
 
 - Store ID: `475421`; test product ID: `1363847`; test variant ID: `2130106`.
 - Product: https://app.lemonsqueezy.com/products/1363847

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Activity, ArrowRight, Check, Cpu, Database, Download, FileUp, Gauge, LockKeyhole, ShieldCheck, Trash2, Trophy } from 'lucide-react';
+import { Activity, Flame, ArrowRight, Check, Cpu, Database, Download, FileUp, Gauge, LockKeyhole, ShieldCheck, Trash2, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BenchmarkReport, CONSENT_VERSION, MAX_REPORT_BYTES, reportSchema, summarize, responsiveness } from '@/lib/benchmark';
 
@@ -76,22 +76,22 @@ export default function Home() {
 
   return <main className="app-shell">
     <aside className="sidebar">
-      <div className="brand"><div className="brand-mark"><Activity size={19}/></div><div><b>LOCAL//AI</b><span>BENCH LAB</span></div></div>
+      <div className="brand"><div className="brand-mark"><Flame size={21}/></div><div><b>TokFire</b><span>TOKFIRE BENCH</span></div></div>
       <nav aria-label="Primary navigation">{([['benchmark','Benchmark',Gauge],['rankings','Comparisons',Trophy],['privacy','My data',ShieldCheck]] as const).map(([id,label,Icon])=><button key={id} aria-label={label} aria-current={tab===id?'page':undefined} className={tab===id?'active':''} onClick={()=>{if(id===tab)return;setTab(id);setLoading(id!=='benchmark');setError('');setMessage('');}}><Icon/>{label}</button>)}</nav>
       <div className="device-mini"><LockKeyhole size={14}/> LOCAL FIRST<div>Developer alpha</div><small>Measured on your Mac</small></div>
-      <div className="side-foot"><span>Text suite</span><b>v1</b></div>
+      <div className="side-foot"><span>TokFire Labs</span><b>tokfires.com</b></div>
     </aside>
     <section className="content">
-      <header className="topbar"><div className="eyebrow">MACOS · APPLE SILICON</div><span className="alpha-badge">NATIVE PREVIEW / 0.4</span></header>
+      <header className="topbar"><div className="eyebrow">MACOS · APPLE SILICON</div><span className="alpha-badge">MACOS PREVIEW / 0.5.1</span></header>
       {error&&<div role="alert" className="notice error">{error}</div>}
       {message&&<div role="status" className="notice">{message}</div>}
       {tab==='benchmark'&&<>
-        <div className="intro"><div><div className="kicker">BENCHMARK / REAL MEASUREMENTS</div><h1>Your Mac, measured<br/><em>for local AI.</em></h1><p>Benchmark GGUF or MLX models, choose 1–3 concurrent jobs calling one model, and save results automatically to your connected account.</p></div><div className="score-ring"><Cpu size={30}/><b>{'1–3'}</b><small>FREE CONCURRENT JOBS</small></div></div>
-        <div className="notice subtle">Tests run in the Mac app. The website stores results and attributed oMLX reference data. Version 0.4 has been tested on an M2 Max; the developer DMG is ad-hoc signed and not notarized.</div>
+        <div className="intro"><div><div className="kicker">TOKFIRE BENCH / BY TOKFIRE LABS</div><h1>Know your model.<br/><em>Know your Mac.</em></h1><p>Benchmark GGUF or MLX models, choose 1–3 concurrent jobs calling one model, and save results automatically to your connected account.</p></div><div className="score-ring"><Cpu size={30}/><b>{'1–3'}</b><small>FREE CONCURRENT JOBS</small></div></div>
+        <div className="notice subtle">Tests run in the Mac app. The website stores results and attributed oMLX reference data. TokFire Bench has been tested on an M2 Max; the developer DMG is ad-hoc signed and not notarized.</div>
         <div className="workspace-grid">
           <section className="panel setup-panel"><div className="panel-head"><div><span>01 / ON YOUR MAC</span><h2>Run a reproducible test</h2></div><Cpu/></div>
-            <ol className="steps"><li><b>Install the Mac app</b><p>Download the DMG, drag the app to Applications, and install Python plus llama.cpp or oMLX. Model weights are downloaded separately.</p></li><li><b>Choose GGUF or MLX</b><p>Choose one model and select 1, 2 or 3 simultaneous jobs before Run. Both llama.cpp and oMLX show live progress and per-job results. Pro unlocks up to 20 jobs on the same model.</p></li><li><b>Connect once, then run</b><p>Automatic upload is enabled before Run; public sharing is separate and off by default. Offline or failed uploads remain queued. JSON and readable commentary are always saved locally.</p></li></ol>
-            <a className="download-link" href="/LocalAIBench-0.5.0-macos-arm64.dmg" download><Download size={17}/>Download macOS DMG · 0.5.0<ArrowRight size={16}/></a><a className="download-link" href="/local-ai-native-source.zip" download><Download size={17}/>Download macOS source<ArrowRight size={16}/></a>
+            <ol className="steps"><li><b>Install the Mac app</b><p>Download the DMG, drag the app to Applications, and install Python plus llama.cpp or oMLX. Model weights are downloaded separately.</p></li><li><b>Choose GGUF or MLX</b><p>Choose one model and select 1, 2 or 3 simultaneous jobs before Run. Both llama.cpp and oMLX show live progress and per-job results. TokFire Bench Pro unlocks up to 20 jobs on the same model. HK$180 once, one activated Mac. Paid release coming after store approval.</p></li><li><b>Connect once, then run</b><p>Automatic upload is enabled before Run; public sharing is separate and off by default. Offline or failed uploads remain queued. JSON and readable commentary are always saved locally.</p></li></ol>
+            <a className="download-link" href="/TokFireBench-0.5.1-macos-arm64.dmg" download><Download size={17}/>Download macOS DMG · 0.5.1<ArrowRight size={16}/></a><a className="download-link" href="/tokfire-bench-source.zip" download><Download size={17}/>Download macOS source<ArrowRight size={16}/></a>
             <div className="fine-print"><b>Start small: MiniCPM5-2B trial</b><p>The download includes a trial launcher. In the extracted native folder, run <code>python3 trial-minicpm.py</code>. It downloads the official Q4_K_M model (~1.56 GB), verifies its checksum, and measures one short run on your Mac. Requires Python and llama-server; no Xcode build is needed for the command-line trial. The CLI trial stays local; trials run in the app follow its upload setting. The full benchmark also supports one model, or up to three in sequence.</p></div>
             <a className="text-link" href="/methodology">Read the methodology & limitations</a><a className="text-link" href="/references">oMLX reference library →</a><a className="text-link" href="/native-connect">Connect the Mac app →</a>
           </section>
@@ -130,6 +130,7 @@ export default function Home() {
         })}
         <a className="text-link" href="/signin-with-chatgpt?return_to=/" target="_top">Sign in to manage your submissions</a>
       </section>}
+      <footer className="brand-footer"><b>TokFire Bench</b><span>Built by TokFire Labs · tokfires.com</span><span>Local models. Measured performance.</span></footer>
     </section>
   </main>;
 }
