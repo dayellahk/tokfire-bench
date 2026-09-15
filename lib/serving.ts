@@ -24,7 +24,7 @@ const jobSample=sample.innerType().omit({user:true}).extend({
  concurrency:z.number().int().min(1).max(20),jobId:z.number().int().min(1).max(20),
  elapsedMs:positive.max(600000),ttftMs:positive.max(600000),
 }).superRefine((s,c)=>{if(s.jobId>s.concurrency||s.ttftMs>s.elapsedMs||Math.abs(s.endToEndTps*s.elapsedMs/1000-s.outputTokens)>.01)c.addIssue({code:'custom',message:'Invalid job timing'});});
-export const jobsSchema=z.object({
+const jobsBase=z.object({
  specVersion:z.literal('local-ai-jobs-v1'),runnerVersion:z.literal('0.5.0'),runId:z.string().uuid(),measuredAt:z.string().datetime(),
  hardware:servingSchema.innerType().shape.hardware,
  runtime:z.object({name:z.enum(['oMLX','llama.cpp']),binarySha256:hash}).strict(),
@@ -32,7 +32,8 @@ export const jobsSchema=z.object({
  jobs:z.array(z.object({jobId:z.number().int().min(1).max(20),modelSha256:hash}).strict()).min(1).max(20),
  models:z.array(z.object({modelSha256:hash,modelName:z.string().min(1).max(200).regex(/^[^/\\\x00-\x1f]+$/),loadMs:positive.max(600000),samples:z.array(jobSample).min(3).max(60)}).strict()).length(1),
  groups:z.array(z.object({concurrency:z.number().int().min(1).max(20),repeat:z.number().int().min(1).max(3),wallMs:positive.max(600000),aggregateTps:positive.max(20000000)}).strict()).length(3),
-}).strict().superRefine((r,c)=>{
+}).strict();
+const validateJobs=(r:z.infer<typeof jobsBase> | z.infer<typeof windowsJobsBase>,c:z.RefinementCtx)=>{
  const n=r.settings.concurrentJobs;const model=r.models[0];const rows=model.samples;
  const invalid=()=>c.addIssue({code:'custom',message:'Incomplete or inconsistent concurrent jobs report'});
  if(r.jobs.length!==n||new Set(r.jobs.map(j=>j.jobId)).size!==n||r.jobs.some(j=>j.jobId>n||j.modelSha256!==model.modelSha256))invalid();
@@ -42,5 +43,12 @@ export const jobsSchema=z.object({
  if(r.runtime.name==='llama.cpp'){
   if(r.settings.inputProfile!=='exact-512-v1'||r.settings.contextPerSlot!==4096||r.settings.threadsPerServer!==r.hardware.cpuCores||rows.some(s=>s.inputTokens!==512||s.outputTokens!==128))invalid();
  }else if(r.settings.inputProfile!=='family-guide-v1; variable'||r.settings.contextPerSlot!==null||r.settings.threadsPerServer!==null)invalid();
+};
+const windowsJobsBase=jobsBase.extend({
+ specVersion:z.literal('local-ai-windows-jobs-v1'),runnerVersion:z.literal('0.6.0'),
+ hardware:z.object({platform:z.literal('Windows'),architecture:z.enum(['x64','arm64']),chip:z.string().min(1).max(160).regex(/^[^\x00-\x1f]+$/),machine:z.string().min(1).max(160).regex(/^[^\x00-\x1f]+$/),cpuCores:positive.int().max(512),memoryBytes:positive.int().max(2**43),osVersion:z.string().regex(/^\d{1,3}\.\d{1,3}\.\d{1,6}(?:\.\d{1,6})?$/),gpuNames:z.array(z.string().min(1).max(160).regex(/^[^\x00-\x1f]+$/)).max(8)}).strict(),
+ runtime:z.object({name:z.literal('llama.cpp'),binarySha256:hash}).strict(),
 });
-export const nativeUploadSchema=z.object({report:z.union([reportSchema,servingSchema,trialSchema,jobsSchema]),consent:z.object({collect:z.literal(true),publish:z.boolean(),version:z.literal(CONSENT_VERSION)}).strict()}).strict();
+export const jobsSchema=jobsBase.superRefine(validateJobs);
+export const windowsJobsSchema=windowsJobsBase.superRefine(validateJobs);
+export const nativeUploadSchema=z.object({report:z.union([reportSchema,servingSchema,trialSchema,jobsSchema,windowsJobsSchema]),consent:z.object({collect:z.literal(true),publish:z.boolean(),version:z.literal(CONSENT_VERSION)}).strict()}).strict();

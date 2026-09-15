@@ -24,3 +24,14 @@ test('real 20-job stress report fits the report contract and cannot masquerade a
  assert.ok(jobsSchema.safeParse(r).success,JSON.stringify(jobsSchema.safeParse(r)));
  r.settings.concurrentJobs=3;assert.equal(jobsSchema.safeParse(r).success,false);
 });
+
+test('Windows synthetic contract preserves job math, platform separation and privacy',async()=>{
+ const {windowsJobsSchema,jobsSchema}=await import('../lib/serving.ts');
+ const r=JSON.parse(readFileSync(new URL('./fixtures/jobs-llama-real.json',import.meta.url)));
+ r.specVersion='local-ai-windows-jobs-v1';r.runnerVersion='0.6.0';
+ r.hardware={platform:'Windows',architecture:'x64',chip:'AMD Ryzen 7',machine:'Test PC',cpuCores:r.settings.threadsPerServer,memoryBytes:32*1024**3,osVersion:'10.0.26100',gpuNames:['NVIDIA GeForce RTX 4070']};
+ assert.ok(windowsJobsSchema.safeParse(r).success,JSON.stringify(windowsJobsSchema.safeParse(r)));
+ assert.equal(jobsSchema.safeParse(r).success,false);
+ assert.ok(nativeUploadSchema.safeParse({report:r,consent:{collect:true,publish:false,version:'2026-09-15-v1'}}).success);
+ for(const alter of [r=>r.hardware.serial='private',r=>r.hardware.username='private',r=>r.hardware.platform='macOS',r=>r.runtime.name='oMLX',r=>r.hardware.cpuCores++,r=>r.groups[0].aggregateTps*=2,r=>r.models[0].samples.pop()]){const bad=structuredClone(r);alter(bad);assert.equal(windowsJobsSchema.safeParse(bad).success,false);}
+});

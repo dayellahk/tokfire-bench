@@ -51,3 +51,10 @@ __pycache__/
 *.pyc
 *.tsbuildinfo
 /native/build/
+
+/windows/bin/
+/windows/obj/
+/windows/publish/
+
+/windows/tests/bin/
+/windows/tests/obj/

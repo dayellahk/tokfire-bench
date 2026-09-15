@@ -1,0 +1,36 @@
+name: Windows preview build
+on:
+  workflow_dispatch:
+  push:
+    paths: ['windows/**', 'native/Sources/LocalAIBench/Resources/**', 'native/Tests/test_jobs.py', 'native/Tests/test_windows.py']
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Probe actual Windows hardware
+        run: python native/Sources/LocalAIBench/Resources/platform_support.py
+      - name: Concurrent jobs and Windows lifecycle unit tests
+        run: |
+          python -m unittest discover -s native/Tests -p test_jobs.py
+          python -m unittest discover -s native/Tests -p test_windows.py
+      - name: Report and model filtering tests
+        run: dotnet run --project windows/tests/Logic.csproj -- tests/fixtures/jobs-llama-real.json
+      - name: Publish Windows x64
+        run: dotnet publish windows/TokFire.Bench.csproj -c Release -r win-x64 --self-contained true -o windows/publish/win-x64
+      - name: Package with dependency notices
+        run: python windows/package.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TokFireBench-Windows-Preview
+          path: |
+            public/TokFireBench-0.6.0-windows-x64.zip
+            public/TokFireBench-0.6.0-windows-x64.zip.sha256

@@ -37,6 +37,13 @@ try{
  check(!(await request('/api/v1/submissions',{cookie:b.cookie})).body.results?.some(x=>x.id===saved.body.id),'other account cannot read private report');
  check((await request('/api/v1/submissions/'+saved.body.id,{method:'DELETE',cookie:b.cookie})).status===404,'other account cannot delete report');
  check((await request('/api/v1/submissions/'+saved.body.id,{method:'DELETE',cookie:a.cookie})).status===200,'owner can delete report');
+ const win=structuredClone(report);win.runId=randomUUID();win.specVersion='local-ai-windows-jobs-v1';win.runnerVersion='0.6.0';
+ win.hardware={platform:'Windows',architecture:'x64',chip:'Synthetic QA CPU',machine:'Synthetic QA PC',cpuCores:win.settings.threadsPerServer,memoryBytes:32*1024**3,osVersion:'10.0.26100',gpuNames:['Synthetic QA GPU']};
+ const windows=await request('/api/v2/submissions',{method:'POST',cookie:a.cookie,data:{...data,report:win}});
+ check(windows.status===201&&windows.body.stored,'synthetic Windows report saved with separate platform profile');
+ const records=await request('/api/v1/submissions',{cookie:a.cookie});check(records.body.results?.some(x=>x.id===windows.body.id),'owner can retrieve Windows report');
+ check(!(await request('/api/v1/submissions',{cookie:b.cookie})).body.results?.some(x=>x.id===windows.body.id),'Windows report remains private');
+ check((await request('/api/v1/submissions/'+windows.body.id,{method:'DELETE',cookie:a.cookie})).status===200,'owner can delete Windows report');
  check((await request('/api/auth/sign-out',{method:'POST',data:{},cookie:a.cookie})).status===200,'sign out');
  check((await request('/api/v1/submissions',{cookie:a.cookie})).status===401,'signed-out session revoked');
  const login=await request('/api/auth/sign-in/email',{method:'POST',data:{email:a.email,password}});check(login.status===200&&login.body.user?.id===ids[0],'password sign in');

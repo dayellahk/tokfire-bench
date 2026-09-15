@@ -4,9 +4,11 @@ A job is one request, not a person. All jobs share the selected model. No genera
 """
 import argparse, concurrent.futures, json, os, signal, socket, subprocess, sys, tempfile, threading, time, uuid
 from pathlib import Path
+from contextlib import contextmanager
 from runner import hardware, sha256, emit, request, runtime_env, complete, PROMPT, atomic_json
 from omlx_runner import model_manifest, measure
 from pro_license import authorize
+from platform_support import windows_hardware
 
 SPEC = 'local-ai-jobs-v1'
 PROCESSES = []
@@ -15,13 +17,24 @@ def stop_all():
     # Signal all servers before waiting: cancellation must unblock every streaming worker.
     for process in PROCESSES:
         if process.poll() is None:
-            try: os.killpg(process.pid, signal.SIGTERM)
+            try:
+                if os.name == 'nt': process.terminate()
+                else: os.killpg(process.pid, signal.SIGTERM)
             except ProcessLookupError: pass
     for process in PROCESSES:
         try: process.wait(timeout=8)
         except subprocess.TimeoutExpired:
-            os.killpg(process.pid, signal.SIGKILL); process.wait()
+            if os.name == 'nt': process.kill()
+            else: os.killpg(process.pid, signal.SIGKILL)
+            process.wait()
     PROCESSES.clear()
+
+@contextmanager
+def workspace():
+    # Windows cannot delete the open server log until all child processes exit.
+    with tempfile.TemporaryDirectory(prefix='localai-jobs-') as tmp:
+        try: yield tmp
+        finally: stop_all()
 
 def preflight(paths, engine, memory, count):
     unique = list(dict.fromkeys(Path(p).resolve() for p in paths))
@@ -57,7 +70,7 @@ def launch(engine, binary, model, slots, cores, root):
         health='/health'
     env={k:v for k,v in runtime_env().items() if not k.startswith(('OMLX_','MLX_'))}
     with (root/'server.log').open('w') as log:
-        proc=subprocess.Popen(args,stdout=log,stderr=log,env=env,start_new_session=True)
+        proc=subprocess.Popen(args,stdout=log,stderr=log,env=env,start_new_session=os.name!='nt',creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
     PROCESSES.append(proc)
     deadline=time.monotonic()+300
     while time.monotonic()<deadline:
@@ -110,11 +123,13 @@ def run(options):
         emit("license", valid=False)
         raise
     emit('progress',phase='inspect',message=f'Preparing {count} concurrent jobs')
-    hw=hardware(); paths=[Path(options.model).resolve()] * count
+    if os.name=='nt' and options.engine!='llama.cpp': raise ValueError('Windows supports llama.cpp / GGUF; oMLX requires Apple Silicon.')
+    hw=windows_hardware() if os.name=='nt' else hardware(); paths=[Path(options.model).resolve()] * count
+    emit('hardware',hardware=hw)
     unique,estimated=preflight(paths,options.engine,hw['memoryBytes'],count)
     results=[]; jobs=[]; groups=[]
     try:
-        with tempfile.TemporaryDirectory(prefix='localai-jobs-') as tmp:
+        with workspace() as tmp:
             bases={}; hashes={}
             for i,path in enumerate(unique):
                 emit('progress',phase='hash',message=f'Hashing model {i+1}/{len(unique)}',modelIndex=i+1)
@@ -135,7 +150,7 @@ def run(options):
                 emit('progress',phase='measure',message=f'{count} simultaneous jobs · repeat {repeat}/3')
                 rows,group=round_jobs(jobs,count,repeat); groups.append(group)
                 for index,row in rows: results[unique.index(paths[index])]['samples'].append(row)
-            report={'specVersion':SPEC,'runnerVersion':'0.5.0','runId':str(uuid.uuid4()),'measuredAt':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),'hardware':hw,
+            report={'specVersion':'local-ai-windows-jobs-v1' if os.name=='nt' else SPEC,'runnerVersion':'0.6.0' if os.name=='nt' else '0.5.0','runId':str(uuid.uuid4()),'measuredAt':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),'hardware':hw,
                     'runtime':{'name':options.engine,'binarySha256':sha256(options.server)},
                     'settings':{'concurrentJobs':count,'repeats':3,'maxOutputTokens':128,'cache':'disabled; unique prefix','inputProfile':'family-guide-v1; variable' if options.engine=='oMLX' else 'exact-512-v1',
                                 'serverLayout':'one shared model server','contextPerSlot':4096 if options.engine=='llama.cpp' else None,'threadsPerServer':hw['cpuCores'] if options.engine=='llama.cpp' else None,

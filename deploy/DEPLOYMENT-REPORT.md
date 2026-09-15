@@ -29,3 +29,14 @@ Application unit: tokfire.service. Active release: /opt/tokfire/current, linked 
 The Nginx reverse proxy is maintained by deploy/tokfire-nginx.conf. Preserve it when using ServerAvatar domain/SSL tools; regenerating a PHP vhost would replace the Node proxy. Certificate renewal is handled by certbot, so the panel's SSL metadata may not reflect the installed certificate.
 
 Pro live sales still await Lemon Squeezy merchant activation. This deployment does not enable live license purchases.
+
+
+## Windows preview update — 2026-09-16
+
+- Live release: `/opt/tokfire/releases/0.6.0`; prior `0.5.2-r2` retained.
+- Added separate strict `local-ai-windows-jobs-v1` upload schema. Mac profiles retain their validation rules. No database table migration needed.
+- Windows x64 self-contained .NET preview ZIP is served at `/TokFireBench-0.6.0-windows-x64.zip`. SHA-256: `5c482882dd94a32d49b40ee325fb99d1545f0d12930e44d48562a807a925680a`.
+- 21 live HTTPS/MySQL smoke checks passed. Windows report was synthetic, private, retrieved and deleted; QA accounts removed. The initial smoke call raced service startup; after readiness returned HTTP 200 the full suite passed.
+- Homepage and 11 CSS/JS/icon assets passed. Nginx continues proxying static assets to Next.js; the previous inaccessible filesystem alias was not restored.
+- Windows build is unsigned and has not been executed on Windows. See `windows/VALIDATION.md` for remaining native GUI, GPU, login and cancellation checks. Mac DMG remains version 0.5.2.
+- SMTP/email verification/password reset provider is still unconfigured. Lemon Squeezy live product/activation remains pending merchant setup.
