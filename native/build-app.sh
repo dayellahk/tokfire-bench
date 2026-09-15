@@ -15,8 +15,8 @@ cat > "$bench_app/Contents/Info.plist" <<'PLIST'
 <key>CFBundleIdentifier</key><string>dev.localaibench.alpha</string>
 <key>CFBundleName</key><string>Local AI Bench</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.2.0</string>
-<key>CFBundleVersion</key><string>2</string>
+<key>CFBundleShortVersionString</key><string>0.2.1</string>
+<key>CFBundleVersion</key><string>3</string>
 <key>LSMinimumSystemVersion</key><string>13.0</string>
 <key>NSHighResolutionCapable</key><true/>
 </dict></plist>

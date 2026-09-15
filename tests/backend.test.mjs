@@ -35,6 +35,21 @@ test('reject extra personal fields, incomplete workloads, duplicate models and i
     r=>r.models[1].modelSha256=r.models[0].modelSha256,r=>r.models[0].samples[0].repeat=2,r=>r.models[0].samples[0].ttftMs=20000];
   for(const mutate of variants){const r=report();mutate(r);assert.equal(reportSchema.safeParse(r).success,false);}
 });
+test('accept updated standard runner and reject short trial submissions before persistence',async()=>{
+  const r=report();r.runnerVersion='0.2.1';assert.equal(reportSchema.safeParse(r).success,true);
+  r.specVersion='local-ai-trial-v1';r.models=r.models.slice(0,1);r.models[0].samples=r.models[0].samples.slice(0,1);
+  r.models[0].samples[0].outputTokens=32;
+  assert.equal(reportSchema.safeParse(r).success,false);
+  const db=database();await assert.rejects(saveSubmission(db,'owner',payload(r,true)),{status:400});
+  assert.equal(db.sql.prepare('SELECT COUNT(*) n FROM submissions').get().n,0);db.sql.close();
+});
+test('single-model full benchmark can be saved and compared with collection and publication consent',async()=>{
+  const r=report();r.runnerVersion='0.2.1';r.models=r.models.slice(0,1);
+  assert.equal(reportSchema.safeParse(r).success,true);
+  const db=database();await saveSubmission(db,'owner',payload(r,true));
+  assert.equal((await ownSubmissions(db,'owner')).results.length,1);
+  assert.equal((await leaderboard(db)).results.length,2);db.sql.close();
+});
 test('collection consent required; private results cannot leak; owner can publish, withdraw and delete',async()=>{
   const db=database(),r=report();
   const noConsent=payload(r);noConsent.consent.collect=false;

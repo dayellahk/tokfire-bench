@@ -24,7 +24,7 @@ const model = z.object({
   if (keys.size !== 6) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Need exactly three repetitions for each workload' });
 });
 export const reportSchema = z.object({
-  specVersion: z.literal(SPEC_VERSION), runnerVersion: z.literal('0.2.0'), runId: z.string().uuid(),
+  specVersion: z.literal(SPEC_VERSION), runnerVersion: z.enum(['0.2.0', '0.2.1']), runId: z.string().uuid(),
   measuredAt: z.string().datetime(),
   hardware: z.object({
     chip: z.string().regex(/^Apple M[0-9]+(?: (?:Pro|Max|Ultra))?$/),
@@ -37,7 +37,7 @@ export const reportSchema = z.object({
     threads: positive.int().max(512), contextTokens: z.literal(4096), gpuLayers: z.literal(999),
     batchTokens: z.literal(512), ubatchTokens: z.literal(512), flashAttention: z.literal(false), kvCache: z.literal('f16'),
   }).strict(),
-  models: z.array(model).min(3).max(5),
+  models: z.array(model).min(1).max(5),
 }).strict().superRefine((r, ctx) => {
   if (new Set(r.models.map(m => m.modelSha256)).size !== r.models.length) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Duplicate model content' });
   if (r.runtime.threads !== r.hardware.cpuCores) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Thread count does not match standard profile' });

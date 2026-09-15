@@ -11,6 +11,15 @@
 - Database-backed community comparison groups for exact model/runtime/workload; no verified badges or uncalibrated overall scores.
 - Source download and user-facing methodology.
 
+## Added in alpha 0.2.1
+
+- Full benchmark accepts one to three selected models; each model server terminates before the next starts. Three selections create three sequential model rounds, each retaining the existing two-workload/three-repetition protocol.
+- Single-model short trial (512 input / 32 output, one warm-up plus one measured run) is a separate local-only specification and rejected by the upload API.
+- MiniCPM5-2B official Q4_K_M download launcher pins a revision and SHA-256, verifies existing files, removes failed downloads and checks the platform/runtime before network access.
+- Fixed cleanup when RSS-monitor startup fails and exposed bounded local runtime startup diagnostics.
+- Real loopback fixture/process integration tests exercise queue order, streaming, startup failure, cancellation and cleanup. Fixture outputs are synthetic and never submitted as benchmark evidence.
+- Original 0.2.0 reports with up to five models remain readable; the updated native UI and CLI queue at most three. Per-model workloads and cohort rules are unchanged.
+
 ## Authentication and privacy
 
 The website uses Sites' dispatch-owned sign-in identity. No independent identity provider is introduced. Account IDs are retained in the private submissions table for ownership; emails are not stored. Public responses expose only opt-in aggregates and contain no account IDs or raw report timestamps. Neither imported JSON nor app output includes user prompts, generated text, model paths, model names or hardware serials.

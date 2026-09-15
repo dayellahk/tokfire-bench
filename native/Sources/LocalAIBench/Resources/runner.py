@@ -20,6 +20,7 @@ import uuid
 from pathlib import Path
 
 SPEC = 'local-ai-text-v1'
+TRIAL_SPEC = 'local-ai-trial-v1'
 PROMPT = ('A local language model helps explain software, compare ideas, and summarize documents. '
           'Describe a practical approach, give an example, and explain its limitations.\n') * 600
 INPUTS = (512, 2048)
@@ -42,7 +43,7 @@ def sha256(path):
     return digest.hexdigest()
 
 def command(args):
-    return subprocess.check_output(args, text=True, timeout=20).strip()
+    return subprocess.check_output(args, text=True, timeout=20, stderr=subprocess.DEVNULL).strip()
 
 def hardware():
     if platform.system() != 'Darwin' or platform.machine() != 'arm64':
@@ -58,8 +59,8 @@ def request(base, path, data=None, timeout=600):
     req = urllib.request.Request(base + path, body, headers={'Content-Type': 'application/json'})
     return HTTP.open(req, timeout=timeout)
 
-def complete(base, tokens):
-    payload = {'prompt': tokens, 'n_predict': OUTPUT, 'stream': True, 'temperature': 0,
+def complete(base, tokens, output_tokens=OUTPUT):
+    payload = {'prompt': tokens, 'n_predict': output_tokens, 'stream': True, 'temperature': 0,
                'seed': 42, 'cache_prompt': False, 'ignore_eos': True, 'return_tokens': True}
     started = time.perf_counter()
     first = None
@@ -83,12 +84,12 @@ def complete(base, tokens):
     if not final or first is None:
         raise ValueError('Missing streamed token IDs or final timings; update llama-server.')
     t = final.get('timings', {})
-    if final.get('truncated') or t.get('predicted_n') != OUTPUT or t.get('prompt_n') != len(tokens) or t.get('cache_n', 0) != 0:
+    if final.get('truncated') or t.get('predicted_n') != output_tokens or t.get('prompt_n') != len(tokens) or t.get('cache_n', 0) != 0:
         raise ValueError('Incomplete, truncated or cached run rejected by the benchmark specification.')
     vals = [t.get('prompt_per_second'), t.get('predicted_per_second'), t.get('prompt_ms'), t.get('predicted_ms')]
     if any(not isinstance(v, (float, int)) or not math.isfinite(v) or v <= 0 for v in vals):
         raise ValueError('Invalid inference timings.')
-    return {'inputTokens': len(tokens), 'outputTokens': OUTPUT, 'ttftMs': (first-started)*1000,
+    return {'inputTokens': len(tokens), 'outputTokens': output_tokens, 'ttftMs': (first-started)*1000,
             'prefillTps': vals[0], 'decodeTps': vals[1], 'prefillMs': vals[2],
             'decodeMs': vals[3], 'elapsedMs': (ended-started)*1000}
 
@@ -102,16 +103,18 @@ class RSSMonitor:
             try:
                 value = int(command(['/bin/ps', '-o', 'rss=', '-p', str(self.pid)])) * 1024
                 self.peak = max(self.peak or 0, value)
-            except (ValueError, subprocess.SubprocessError):
+            except (ValueError, OSError, subprocess.SubprocessError):
                 pass
             self.stop_event.wait(.25)
     def start(self):
         self.thread.start()
     def stop(self):
         self.stop_event.set()
-        self.thread.join(timeout=21)
+        if self.thread.ident is not None:
+            self.thread.join(timeout=21)
 
-def measure_model(binary, path, threads, memory):
+def measure_model(binary, path, threads, memory, trial=False):
+    inputs, output, repeats = ((512,), 32, 1) if trial else (INPUTS, OUTPUT, REPEATS)
     if path.suffix.lower() != '.gguf' or not path.is_file():
         raise ValueError('Choose a single-file GGUF model.')
     with path.open('rb') as f:
@@ -134,12 +137,15 @@ def measure_model(binary, path, threads, memory):
     with tempfile.TemporaryFile() as log:
         proc = subprocess.Popen(args, stdout=log, stderr=log, env=runtime_env())
         monitor = RSSMonitor(proc.pid)
-        monitor.start()
         try:
+            monitor.start()
             deadline = time.monotonic() + 300
             while True:
                 if proc.poll() is not None:
-                    raise ValueError('llama-server exited. Check the runtime version and model compatibility.')
+                    log.seek(0, os.SEEK_END)
+                    log.seek(max(0, log.tell() - 4000))
+                    diagnostic = log.read().decode('utf-8', errors='replace').strip()
+                    raise ValueError('llama-server exited. Local runtime diagnostic (not included in reports):\n' + diagnostic)
                 try:
                     with request(base, '/health', timeout=1) as res:
                         ready = json.load(res).get('status') == 'ok'
@@ -153,16 +159,16 @@ def measure_model(binary, path, threads, memory):
             load_ms = (time.perf_counter()-started)*1000
             with request(base, '/tokenize', {'content': PROMPT, 'add_special': True}) as res:
                 all_tokens = json.load(res)['tokens']
-            if len(all_tokens) < max(INPUTS) or any(type(x) is not int for x in all_tokens):
+            if len(all_tokens) < max(inputs) or any(type(x) is not int or x < 0 for x in all_tokens):
                 raise ValueError('Tokenizer response is incompatible.')
             samples = []
-            for count in INPUTS:
+            for count in inputs:
                 tokens = all_tokens[:count]
                 emit('progress', message=f'Warm-up: {count} input tokens')
-                complete(base, tokens)
-                for repeat in range(REPEATS):
-                    emit('progress', message=f'{count} input tokens · measured run {repeat+1}/{REPEATS}')
-                    row = complete(base, tokens)
+                complete(base, tokens, output)
+                for repeat in range(repeats):
+                    emit('progress', message=f'{count} input tokens · measured run {repeat+1}/{repeats}')
+                    row = complete(base, tokens, output)
                     row['repeat'] = repeat + 1
                     samples.append(row)
             result = {'modelSha256': fingerprint, 'modelBytes': path.stat().st_size,
@@ -195,6 +201,7 @@ def main():
     parser.add_argument('--models', nargs='+', type=Path)
     parser.add_argument('--output', type=Path)
     parser.add_argument('--hardware', action='store_true')
+    parser.add_argument('--trial', action='store_true', help='One model, one short measured run; local-only report.')
     options = parser.parse_args()
     hw = hardware()
     if options.hardware:
@@ -202,15 +209,16 @@ def main():
         return
     if not options.server or not options.server.is_file() or not os.access(options.server, os.X_OK):
         raise ValueError('Select an executable llama-server binary.')
-    if not options.models or not 3 <= len(options.models) <= 5 or len(set(p.resolve() for p in options.models)) != len(options.models):
-        raise ValueError('Choose 3–5 different GGUF files.')
+    allowed_counts = (1,) if options.trial else (1, 2, 3)
+    if not options.models or len(options.models) not in allowed_counts or len(set(p.resolve() for p in options.models)) != len(options.models):
+        raise ValueError('Choose exactly one GGUF file for a trial.' if options.trial else 'Choose 1–3 different GGUF files; models run sequentially.')
     if options.output is None:
         raise ValueError('Choose an output report path.')
     emit('progress', message='Inspecting runtime and hardware')
     version = subprocess.run([str(options.server), '--version'], capture_output=True, text=True, timeout=20, check=True, env=runtime_env())
     # Public record uses hashes, not arbitrary binary output or local file names.
     version_hash = hashlib.sha256((version.stdout + version.stderr).encode()).hexdigest()
-    report = {'specVersion': SPEC, 'runnerVersion': '0.2.0', 'runId': str(uuid.uuid4()),
+    report = {'specVersion': TRIAL_SPEC if options.trial else SPEC, 'runnerVersion': '0.2.1', 'runId': str(uuid.uuid4()),
               'measuredAt': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
               'hardware': hw, 'runtime': {'name': 'llama.cpp', 'binarySha256': sha256(options.server),
               'versionSha256': version_hash, 'threads': hw['cpuCores'], 'contextTokens': 4096,
@@ -218,8 +226,8 @@ def main():
               'kvCache': 'f16'}, 'models': []}
     hashes = set()
     for idx, path in enumerate(options.models):
-        emit('progress', message=f'Model {idx+1}/{len(options.models)}')
-        model = measure_model(options.server.resolve(), path.resolve(), hw['cpuCores'], hw['memoryBytes'])
+        emit('progress', message=f'Model {idx+1}/{len(options.models)}', modelIndex=idx+1)
+        model = measure_model(options.server.resolve(), path.resolve(), hw['cpuCores'], hw['memoryBytes'], trial=options.trial)
         if model['modelSha256'] in hashes:
             raise ValueError('Duplicate model content; choose different model files.')
         hashes.add(model['modelSha256'])

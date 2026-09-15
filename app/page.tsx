@@ -49,7 +49,9 @@ export default function Home() {
     setError('');setMessage('');
     try {
       if(file.size>MAX_REPORT_BYTES)throw new Error('Report is too large. Maximum size is 200 KB.');
-      const parsed=reportSchema.safeParse(JSON.parse(await file.text()));
+      const raw=JSON.parse(await file.text());
+      if(raw?.specVersion==='local-ai-trial-v1')throw new Error('This is a short local trial. Run the full benchmark for your selected model(s) to submit comparable measurements.');
+      const parsed=reportSchema.safeParse(raw);
       if(!parsed.success)throw new Error('This file is not a complete v1 benchmark report. Use the current native runner. Extra fields and incomplete runs are rejected.');
       setReport(parsed.data);setCollect(false);setPublish(false);setSubmitted(false);
       setMessage('Report opened locally in this browser. Nothing has been uploaded.');
@@ -84,12 +86,13 @@ export default function Home() {
       {error&&<div role="alert" className="notice error">{error}</div>}
       {message&&<div role="status" className="notice">{message}</div>}
       {tab==='benchmark'&&<>
-        <div className="intro"><div><div className="kicker">BENCHMARK / REAL MEASUREMENTS</div><h1>Your Mac, measured<br/><em>for local AI.</em></h1><p>Run the native benchmark on your Mac. Review the measurements here and choose what to share.</p></div><div className="score-ring"><Cpu size={30}/><b>{report?report.models.length:'3–5'}</b><small>MODELS PER TEST</small></div></div>
+        <div className="intro"><div><div className="kicker">BENCHMARK / REAL MEASUREMENTS</div><h1>Your Mac, measured<br/><em>for local AI.</em></h1><p>Run the native benchmark on your Mac. Review the measurements here and choose what to share.</p></div><div className="score-ring"><Cpu size={30}/><b>{report?report.models.length:'1–3'}</b><small>MODELS IN QUEUE</small></div></div>
         <div className="notice subtle">This website does not run models or detect your Mac. No demo scores are included. Native compilation and Apple Silicon validation are still required for this alpha.</div>
         <div className="workspace-grid">
           <section className="panel setup-panel"><div className="panel-head"><div><span>01 / ON YOUR MAC</span><h2>Run a reproducible test</h2></div><Cpu/></div>
-            <ol className="steps"><li><b>Build the native alpha</b><p>Download the source package. Follow its README to install the runtime and build with Xcode’s command-line tools.</p></li><li><b>Select 3–5 local GGUF models</b><p>Models load one at a time. The app performs warm-ups and three measured runs per workload.</p></li><li><b>Export your JSON report</b><p>Two prompt lengths, fixed output length, actual token counts and exact model hashes. No automatic upload.</p></li></ol>
+            <ol className="steps"><li><b>Build the native alpha</b><p>Download the source package. Follow its README to install the runtime and build with Xcode’s command-line tools.</p></li><li><b>Select 1–3 local GGUF models</b><p>Three selections give three model rounds. Each model completes its warm-ups and measurements and closes before the next model loads.</p></li><li><b>Export your JSON report</b><p>Two prompt lengths, fixed output length, actual token counts and exact model hashes. No automatic upload.</p></li></ol>
             <a className="download-link" href="/local-ai-native-source.zip" download><Download size={17}/>Download macOS source<ArrowRight size={16}/></a>
+            <div className="fine-print"><b>Start small: MiniCPM5-2B trial</b><p>The download includes a trial launcher. In the extracted native folder, run <code>python3 trial-minicpm.py</code>. It downloads the official Q4_K_M model (~1.56 GB), verifies its checksum, and measures one short run on your Mac. Requires Python and llama-server; no Xcode build is needed for the command-line trial. Trial reports stay local. The full benchmark also supports one model, or up to three in sequence.</p></div>
             <a className="text-link" href="/methodology">Read the methodology & limitations</a>
           </section>
           <aside className="panel run-panel"><span className="panel-index">02 / REVIEW</span><h2>Bring your results.</h2><p>Open the report exported by the native app. It is validated locally before you decide whether to upload it.</p>
