@@ -45,6 +45,7 @@ next-env.d.ts
 /outputs/
 /work/
 /native/.build/
+/native/.build-release/
 /native/.swiftpm/
 __pycache__/
 *.pyc

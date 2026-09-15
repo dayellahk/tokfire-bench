@@ -1,0 +1,352 @@
+{
+  "specVersion": "local-ai-omlx-v1",
+  "runnerVersion": "0.4.0",
+  "runId": "49e5989c-b181-4aa9-b727-a7c190469518",
+  "measuredAt": "2026-09-15T14:46:34Z",
+  "hardware": {
+    "chip": "Apple M2 Max",
+    "machine": "Mac14,5",
+    "cpuCores": 12,
+    "memoryBytes": 103079215104,
+    "osVersion": "26.5.2"
+  },
+  "runtime": {
+    "name": "oMLX",
+    "versionText": "0.6.4",
+    "binarySha256": "58b2d7aae13f8aefd3453860bbe151a56586e0ec9e62cc183a8a0e8867314bc8"
+  },
+  "settings": {
+    "cache": "disabled; unique prefix",
+    "concurrency": [
+      1,
+      2,
+      3
+    ],
+    "repeats": 3,
+    "maxOutputTokens": 128,
+    "inputProfile": "family-guide-v1; server-counted variable token length",
+    "timing": "decode/prefill from oMLX usage; TTFT and end-to-end from client",
+    "targetTps": [
+      100,
+      200
+    ],
+    "targetSource": "user-selected; not a ChatGPT plan speed guarantee"
+  },
+  "models": [
+    {
+      "modelSha256": "47d7105b473b14707abf63d36ac2835b925cb8ec5ff48e25c0041011767ca81d",
+      "modelName": "Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled-MLX-oQ4-MTP",
+      "loadMs": 23460.948583087884,
+      "samples": [
+        {
+          "inputTokens": 775,
+          "outputTokens": 128,
+          "ttftMs": 3279.786583967507,
+          "prefillTps": 237.73,
+          "decodeTps": 39.84,
+          "endToEndTps": 19.726864859014764,
+          "elapsedMs": 6488.6134170228615,
+          "cachedTokens": 0,
+          "concurrency": 1,
+          "repeat": 1,
+          "user": 1,
+          "finishReason": "length"
+        },
+        {
+          "inputTokens": 774,
+          "outputTokens": 128,
+          "ttftMs": 3371.838332968764,
+          "prefillTps": 230.44,
+          "decodeTps": 37.16,
+          "endToEndTps": 18.79529431905559,
+          "elapsedMs": 6810.215250006877,
+          "cachedTokens": 0,
+          "concurrency": 1,
+          "repeat": 2,
+          "user": 1,
+          "finishReason": "length"
+        },
+        {
+          "inputTokens": 777,
+          "outputTokens": 128,
+          "ttftMs": 3291.5620419662446,
+          "prefillTps": 237.11,
+          "decodeTps": 37.62,
+          "endToEndTps": 19.13485025971822,
+          "elapsedMs": 6689.3651250284165,
+          "cachedTokens": 0,
+          "concurrency": 1,
+          "repeat": 3,
+          "user": 1,
+          "finishReason": "length"
+        },
+        {
+          "inputTokens": 775,
+          "outputTokens": 128,
+          "ttftMs": 8408.475915901363,
+          "prefillTps": 92.46,
+          "decodeTps": 30.97,
+          "endToEndTps": 10.209649231845567,
+          "elapsedMs": 12537.159415893257,
+          "cachedTokens": 0,
+          "concurrency": 2,
+          "repeat": 1,
+          "user": 1,
+          "finishReason": "length"
+        },
+        {
+          "inputTokens": 780,
+          "outputTokens": 128,
+          "ttftMs": 5294.722249964252,
+          "prefillTps": 148.02,
+          "decodeTps": 23.96,
+          "endToEndTps": 12.036516203759833,
+          "elapsedMs": 10634.306292049587,
+          "cachedTokens": 0,
+          "concurrency": 2,
+          "repeat": 1,
+          "user": 2,
+          "finishReason": "length"
+        },
+        {
+          "inputTokens": 776,
+          "outputTokens": 128,
+          "ttftMs": 4381.473415996879,
+          "prefillTps": 177.95,
+          "decodeTps": 21.07,
+          "endToEndTps": 12.247462711865472,
+          "elapsedMs": 10451.14429097157,
+          "cachedTokens": 0,
+          "concurrency": 2,
+          "repeat": 2,
+          "user": 1,
+          "finishReason": "length"
+        },
+        {
+          "inputTokens": 778,
+          "outputTokens": 128,
+          "ttftMs": 8908.255957998335,
+          "prefillTps": 87.55,
+          "decodeTps": 33.15,
+          "endToEndTps": 10.02744841029489,
+          "elapsedMs": 12764.96220799163,
+          "cachedTokens": 0,
+          "concurrency": 2,
+          "repeat": 2,
+          "user": 2,
+          "finishReason": "length"
+        },
+        {
+          "inputTokens": 776,
+          "outputTokens": 128,
+          "ttftMs": 4342.649625032209,
+          "prefillTps": 179.32,
+          "decodeTps": 21.08,
+          "endToEndTps": 12.295067549166946,
+          "elapsedMs": 10410.678874934092,
+          "cachedTokens": 0,
+          "concurrency": 2,
+          "repeat": 3,
+          "user": 1,
+          "finishReason": "length"
+        },
+        {
+          "inputTokens": 780,
+          "outputTokens": 128,
+          "ttftMs": 8817.519083037041,
+          "prefillTps": 88.62,
+          "decodeTps": 33.72,
+          "endToEndTps": 10.151776091339753,
+          "elapsedMs": 12608.631125069223,
+          "cachedTokens": 0,
+          "concurrency": 2,
+          "repeat": 3,
+          "user": 2,
+          "finishReason": "length"
+        },
+        {
+          "inputTokens": 777,
+          "outputTokens": 128,
+          "ttftMs": 4495.586583041586,
+          "prefillTps": 173.52,
+          "decodeTps": 13.96,
+          "endToEndTps": 9.371033640421794,
+          "elapsedMs": 13659.112208057195,
+          "cachedTokens": 0,
+          "concurrency": 3,
+          "repeat": 1,
+          "user": 1,
+          "finishReason": "length"
+        },
+        {
+          "inputTokens": 777,
+          "outputTokens": 128,
+          "ttftMs": 14477.41066699382,
+          "prefillTps": 53.74,
+          "decodeTps": 34.47,
+          "endToEndTps": 7.038296270414958,
+          "elapsedMs": 18186.219374998473,
+          "cachedTokens": 0,
+          "concurrency": 3,
+          "repeat": 1,
+          "user": 2,
+          "finishReason": "length"
+        },
+        {
+          "inputTokens": 776,
+          "outputTokens": 128,
+          "ttftMs": 9939.351749955676,
+          "prefillTps": 78.22,
+          "decodeTps": 18.76,
+          "endToEndTps": 7.638707002354143,
+          "elapsedMs": 16756.76262495108,
+          "cachedTokens": 0,
+          "concurrency": 3,
+          "repeat": 1,
+          "user": 3,
+          "finishReason": "length"
+        },
+        {
+          "inputTokens": 773,
+          "outputTokens": 128,
+          "ttftMs": 10088.2843749132,
+          "prefillTps": 76.86,
+          "decodeTps": 17.72,
+          "endToEndTps": 7.396646848612339,
+          "elapsedMs": 17305.138750001788,
+          "cachedTokens": 0,
+          "concurrency": 3,
+          "repeat": 2,
+          "user": 1,
+          "finishReason": "length"
+        },
+        {
+          "inputTokens": 777,
+          "outputTokens": 128,
+          "ttftMs": 4672.817875049077,
+          "prefillTps": 167.32,
+          "decodeTps": 13.63,
+          "endToEndTps": 9.10527649615409,
+          "elapsedMs": 14057.782875024714,
+          "cachedTokens": 0,
+          "concurrency": 3,
+          "repeat": 2,
+          "user": 2,
+          "finishReason": "length"
+        },
+        {
+          "inputTokens": 779,
+          "outputTokens": 128,
+          "ttftMs": 14818.635749979876,
+          "prefillTps": 52.67,
+          "decodeTps": 30.67,
+          "endToEndTps": 6.740872644381566,
+          "elapsedMs": 18988.639416988008,
+          "cachedTokens": 0,
+          "concurrency": 3,
+          "repeat": 2,
+          "user": 3,
+          "finishReason": "length"
+        },
+        {
+          "inputTokens": 779,
+          "outputTokens": 128,
+          "ttftMs": 14785.835250047967,
+          "prefillTps": 52.78,
+          "decodeTps": 29.42,
+          "endToEndTps": 6.690455431892847,
+          "elapsedMs": 19131.731958012097,
+          "cachedTokens": 0,
+          "concurrency": 3,
+          "repeat": 3,
+          "user": 1,
+          "finishReason": "length"
+        },
+        {
+          "inputTokens": 774,
+          "outputTokens": 128,
+          "ttftMs": 4522.456582984887,
+          "prefillTps": 172.21,
+          "decodeTps": 13.41,
+          "endToEndTps": 9.103828407474476,
+          "elapsedMs": 14060.018958058208,
+          "cachedTokens": 0,
+          "concurrency": 3,
+          "repeat": 3,
+          "user": 2,
+          "finishReason": "length"
+        },
+        {
+          "inputTokens": 780,
+          "outputTokens": 128,
+          "ttftMs": 10185.867000021972,
+          "prefillTps": 76.77,
+          "decodeTps": 17.58,
+          "endToEndTps": 7.329566848820618,
+          "elapsedMs": 17463.514917064458,
+          "cachedTokens": 0,
+          "concurrency": 3,
+          "repeat": 3,
+          "user": 3,
+          "finishReason": "length"
+        }
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "concurrency": 1,
+      "repeat": 1,
+      "wallMs": 6511.438042041846,
+      "aggregateTps": 19.657716033471154
+    },
+    {
+      "concurrency": 1,
+      "repeat": 2,
+      "wallMs": 6810.883332975209,
+      "aggregateTps": 18.79345067919194
+    },
+    {
+      "concurrency": 1,
+      "repeat": 3,
+      "wallMs": 6690.228374907747,
+      "aggregateTps": 19.1323812622114
+    },
+    {
+      "concurrency": 2,
+      "repeat": 1,
+      "wallMs": 12538.965291925706,
+      "aggregateTps": 20.41635765311893
+    },
+    {
+      "concurrency": 2,
+      "repeat": 2,
+      "wallMs": 12765.939707984217,
+      "aggregateTps": 20.053361198305645
+    },
+    {
+      "concurrency": 2,
+      "repeat": 3,
+      "wallMs": 12609.27358304616,
+      "aggregateTps": 20.302517691757092
+    },
+    {
+      "concurrency": 3,
+      "repeat": 1,
+      "wallMs": 18187.762291985564,
+      "aggregateTps": 21.113097578211125
+    },
+    {
+      "concurrency": 3,
+      "repeat": 2,
+      "wallMs": 18990.817375015467,
+      "aggregateTps": 20.220298706320808
+    },
+    {
+      "concurrency": 3,
+      "repeat": 3,
+      "wallMs": 19133.602416026406,
+      "aggregateTps": 20.06940416397278
+    }
+  ]
+}

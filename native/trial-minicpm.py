@@ -64,7 +64,7 @@ def main():
     server = args.server or Path(shutil.which('llama-server') or '/opt/homebrew/bin/llama-server')
     if not server.is_file() or not os.access(server, os.X_OK):
         raise ValueError('llama-server is missing. With Homebrew installed, run: brew install llama.cpp python')
-    subprocess.run([str(server), '--version'], check=True, env=runner.runtime_env(), timeout=20)
+    subprocess.run([str(server), '--version'], check=True, env=runner.runtime_env(), timeout=180)
     folder = Path.home() / 'Library/Application Support/LocalAIBench'
     model = args.model or folder / 'Models' / MODEL
     if args.model and not model.is_file():

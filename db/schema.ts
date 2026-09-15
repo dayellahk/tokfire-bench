@@ -18,3 +18,7 @@ export const measurements = sqliteTable('measurements', {
   decodeTps: real('decode_tps').notNull(), ttftMs: real('ttft_ms').notNull(), prefillTps: real('prefill_tps').notNull(),
   peakRssBytes: integer('peak_rss_bytes'), loadMs: real('load_ms').notNull(),
 }, t => [index('idx_measurements_submission').on(t.submissionId), index('idx_measurements_cohort').on(t.cohort)]);
+export const externalBenchmarks=sqliteTable('external_benchmarks',{
+ id:text('id').primaryKey(),kind:text('kind').notNull(),sourceUrl:text('source_url').notNull(),
+ fetchedAt:text('fetched_at').notNull(),coverage:text('coverage').notNull(),rowJson:text('row_json').notNull(),
+},t=>[index('idx_external_kind').on(t.kind)]);

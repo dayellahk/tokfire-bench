@@ -1,168 +1,240 @@
 import SwiftUI
 import AppKit
-import UniformTypeIdentifiers
 
-@main
-struct LocalAIBenchApp: App {
+@main struct LocalAIBenchApp: App {
     @StateObject private var bench = BenchController()
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     var body: some Scene {
         WindowGroup {
-            BenchView(bench: bench).frame(minWidth: 780, minHeight: 650)
-                .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in bench.cancel() }
-        }
+            WorkspaceView(bench: bench)
+                .frame(minWidth: 1080, minHeight: 760)
+                .onAppear { delegate.bench = bench; NSApp.activate(ignoringOtherApps: true) }
+        }.defaultSize(width: 1180, height: 840)
     }
 }
-
-final class BenchController: ObservableObject {
-    @Published var server = "/opt/homebrew/bin/llama-server"
-    @Published var python = "/opt/homebrew/bin/python3"
-    @Published var models: [URL] = []
-    @Published var trial = false
-    @Published var reportIsTrial = false
-    @Published var currentModel = 0
-    @Published var running = false
-    @Published var message = "Choose 1–3 GGUF models. They will run one at a time."
-    @Published var summaries: [String] = []
-    @Published var report: URL?
-    @Published var outputText = ""
-    private var task: Process?
-    private let website = URL(string: "https://local-ai-benchmark-lab.mossy-fern-2045.chatgpt.site/")!
-    var validSelection: Bool { trial ? models.count == 1 : (1...3).contains(models.count) }
-
-    func chooseModels() {
-        let panel = NSOpenPanel()
-        panel.allowsMultipleSelection = !trial
-        panel.canChooseDirectories = false
-        if let gguf = UTType(filenameExtension: "gguf") { panel.allowedContentTypes = [gguf] }
-        if panel.runModal() == .OK {
-            let files = panel.urls.filter { $0.pathExtension.lowercased() == "gguf" }
-            guard (trial ? files.count == 1 : (1...3).contains(files.count)) else {
-                message = trial ? "Please choose one GGUF file." : "Please choose 1–3 GGUF files."; return
-            }
-            models = files
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    var bench: BenchController?
+    private var waitingToQuit = false
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard let bench, bench.running else { return .terminateNow }
+        guard !waitingToQuit else { return .terminateCancel }
+        waitingToQuit = true
+        bench.cancel()
+        Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { timer in
+            Task { @MainActor in if !bench.running { timer.invalidate(); sender.terminate(nil) } }
         }
+        // Leave AppKit's nested termination loop so SwiftUI/main-queue cleanup
+        // can finish; retry quitting once the runner has reaped its server.
+        return .terminateCancel
     }
-    func chooseBinary(python isPython: Bool) {
-        let panel = NSOpenPanel()
-        panel.canChooseDirectories = false
-        if panel.runModal() == .OK, let url = panel.url {
-            if isPython { python = url.path } else { server = url.path }
-        }
-    }
-    func run() {
-        guard !running, validSelection,
-              let script = (Bundle.main.url(forResource: "runner", withExtension: "py") ?? Bundle.module.url(forResource: "runner", withExtension: "py")) else { return }
-        guard FileManager.default.isExecutableFile(atPath: python), FileManager.default.isExecutableFile(atPath: server) else {
-            message = "Select installed Python 3.10+ and llama-server executables."; return
-        }
-        do {
-            let folder = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true).appendingPathComponent("LocalAIBench/Reports")
-            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-            let destination = folder.appendingPathComponent("benchmark-\(UUID().uuidString).json")
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: python)
-            process.arguments = ["-u", script.path] + (trial ? ["--trial"] : []) + ["--server", server, "--output", destination.path, "--models"] + models.map(\.path)
-            let pipe = Pipe()
-            process.standardOutput = pipe
-            process.standardError = FileHandle.nullDevice
-            running = true; report = nil; reportIsTrial = trial; currentModel = 0; summaries = []; outputText = ""; message = "Starting benchmark…"
-            task = process
-            do { try process.run() } catch { running = false; task = nil; throw error }
-            // Reading on a worker queue prevents inference from blocking SwiftUI.
-            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-                var pending = Data()
-                while true {
-                    let chunk = pipe.fileHandleForReading.availableData
-                    if chunk.isEmpty { break }
-                    pending.append(chunk)
-                    while let newline = pending.firstIndex(of: 10) {
-                        let line = pending.prefix(upTo: newline)
-                        pending.removeSubrange(...newline)
-                        guard let event = try? JSONSerialization.jsonObject(with: Data(line)) as? [String: Any] else { continue }
-                        DispatchQueue.main.async { self?.receive(event, destination: destination) }
-                    }
-                }
-                process.waitUntilExit()
-                DispatchQueue.main.async {
-                    guard let self = self else { return }
-                    self.running = false; self.task = nil
-                    if process.terminationStatus != 0 && self.report == nil && !self.message.hasPrefix("Stopped") {
-                        self.message = "Benchmark failed: " + self.message
-                    }
-                }
-            }
-        } catch { message = error.localizedDescription }
-    }
-    private func receive(_ event: [String: Any], destination: URL) {
-        if let index = event["modelIndex"] as? Int { currentModel = index }
-        switch event["event"] as? String {
-        case "progress", "error", "cancelled": message = event["message"] as? String ?? "Status unavailable"
-        case "model":
-            let index = event["modelIndex"] as? Int ?? 0
-            let speed = event["decodeTps"] as? Double ?? 0
-            summaries.append(String(format: "Model %d: %.1f tokens/sec at 512 input tokens", index, speed))
-        case "complete":
-            report = destination
-            outputText = (try? String(contentsOf: destination, encoding: .utf8)) ?? ""
-            message = reportIsTrial ? "Trial complete. Report saved locally; short trials cannot be uploaded to comparisons." : "Complete. Report saved locally. No data has been uploaded."
-        default: break
-        }
-    }
-    func cancel() { if let task = task, task.isRunning { task.terminate() }; message = "Stopped. Waiting for the model process to close…" }
-    func export() {
-        guard let report = report else { return }
-        let panel = NSSavePanel()
-        panel.nameFieldStringValue = "local-ai-benchmark.json"
-        panel.allowedContentTypes = [.json]
-        if panel.runModal() == .OK, let destination = panel.url {
-            do { try Data(contentsOf: report).write(to: destination, options: .atomic) }
-            catch { message = error.localizedDescription }
-        }
-    }
-    func openWebsite() { NSWorkspace.shared.open(website) }
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 }
-
-struct BenchView: View {
+enum Page: String, CaseIterable {
+    case discover, benchmark, history, settings
+    var icon: String { switch self { case .discover: return "square.grid.2x2"; case .benchmark: return "waveform.path.ecg"; case .history: return "clock.arrow.circlepath"; case .settings: return "slider.horizontal.3" } }
+}
+let ink = Color(red: 0.09, green: 0.16, blue: 0.22)
+let muted = Color(red: 0.40, green: 0.46, blue: 0.50)
+let accent = Color(red: 0.02, green: 0.48, blue: 0.43)
+let canvas = Color(red: 0.95, green: 0.965, blue: 0.96)
+struct Panel<Content: View>: View {
+    var title: String? = nil
+    @ViewBuilder var content: Content
+    var body: some View { VStack(alignment: .leading, spacing: 16) { if let title { Text(title).font(.headline) }; content }.padding(22).frame(maxWidth: .infinity, alignment: .leading).background(.white, in: RoundedRectangle(cornerRadius: 18)).overlay(RoundedRectangle(cornerRadius: 18).stroke(ink.opacity(0.07))) }
+}
+struct Tag: View { let text: String; var color: Color = accent
+    var body: some View { Text(text).font(.system(size: 11, weight: .semibold)).padding(.horizontal, 9).padding(.vertical, 5).background(color.opacity(0.09), in: Capsule()).foregroundColor(color) }
+}
+struct Metric: View { let title: String; let value: String; let unit: String
+    var body: some View { VStack(alignment: .leading, spacing: 7) { Text(title).font(.caption).foregroundColor(muted); HStack(alignment: .firstTextBaseline, spacing: 5) { Text(value).font(.system(size: 27, weight: .semibold, design: .rounded)).monospacedDigit(); Text(unit).font(.caption).foregroundColor(muted) } }.frame(maxWidth: .infinity, alignment: .leading) }
+}
+@MainActor func assessment(_ speed: Double, _ ttft: Double) -> String {
+    L(speed >= 30 && ttft <= 1000 ? "fast" : speed >= 15 && ttft <= 3000 ? "comfortableUse" : "slow")
+}
+struct WorkspaceView: View {
     @ObservedObject var bench: BenchController
+    @ObservedObject private var lang = LanguageStore.shared
+    @StateObject private var catalog = CatalogStore(device: .detect())
+    @State private var page = Page.discover
+    @State private var showModel = false
+    @State private var initialized = false
+    private let timer = Timer.publish(every: 4, on: .main, in: .common).autoconnect()
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
-                Text("LOCAL//AI  BENCH LAB").font(.system(.caption, design: .monospaced)).foregroundColor(.green)
-                Text("Measure your Mac.").font(.system(size: 40, weight: .bold))
-                Text("Real llama.cpp measurements · Apple Silicon · Developer alpha").foregroundColor(.secondary)
-                Text("Detected: \(ProcessInfo.processInfo.processorCount) CPU cores · \(ProcessInfo.processInfo.physicalMemory / (1024 * 1024 * 1024)) GiB memory").font(.headline)
-                GroupBox("Runtime") {
-                    VStack(alignment: .leading) {
-                        HStack { TextField("Python 3 executable", text: $bench.python); Button("Choose Python") { bench.chooseBinary(python: true) } }
-                        HStack { TextField("llama-server executable", text: $bench.server); Button("Choose runtime") { bench.chooseBinary(python: false) } }
-                    }.padding(10)
-                }.disabled(bench.running)
-                Toggle("Quick trial — one model, one short measured run", isOn: $bench.trial).disabled(bench.running)
-                GroupBox(bench.trial ? "Model — choose one single-file GGUF" : "Models — choose 1–3 GGUFs; one runs at a time") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        ForEach(Array(bench.models.enumerated()), id: \.offset) { index, url in Text("\(index + 1). \(url.lastPathComponent)").font(.system(.body, design: .monospaced)) }
-                        Button(bench.trial ? "Choose model file" : "Choose up to 3 model files") { bench.chooseModels() }.disabled(bench.running)
-                        Text("Selected models run in order. Each model process closes before the next starts. Each file must be below 65% of physical memory. This is a conservative preflight estimate, not a guarantee of fit.").font(.caption).foregroundColor(.secondary)
-                    }.frame(maxWidth: .infinity, alignment: .leading).padding(10)
-                }
-                Text(bench.trial ? "Trial: 512 input tokens · 32 output tokens · 1 warm-up + 1 measured run · local-only results" : "Per model: 512 and 2,048 input tokens · 128 output tokens · 1 warm-up + 3 measured runs per workload · 4,096 context · cache disabled").font(.callout).foregroundColor(.secondary)
-                HStack {
-                    Button(bench.trial ? "Run trial" : "Run benchmark") { bench.run() }.buttonStyle(.borderedProminent).disabled(bench.running || !bench.validSelection)
-                    if bench.running { ProgressView().controlSize(.small); Button("Stop") { bench.cancel() } }
-                }
-                Text(bench.message).textSelection(.enabled)
-                if bench.running && bench.currentModel > 0 {
-                    Text("Model round \(bench.currentModel) of \(bench.models.count) · one model active").font(.headline)
-                }
-                ForEach(Array(bench.summaries.enumerated()), id: \.offset) { _, line in Text(line).font(.headline) }
-                if bench.report != nil {
-                    HStack { Button("Export report…") { bench.export() }; if !bench.reportIsTrial { Button("Review & upload on website") { bench.openWebsite() } } }
-                    DisclosureGroup("Inspect exact report contents") { Text(bench.outputText).font(.system(.caption, design: .monospaced)).textSelection(.enabled) }
-                }
-                Divider()
-                Label("Local by default. The app never uploads results. Choose collection and publication separately on the website.", systemImage: "lock.shield").font(.callout)
-                Text("TTFT includes loopback HTTP overhead. Process RSS is not total GPU/unified memory. Model names and file paths stay on this Mac; exported models are identified by content hashes.").font(.caption).foregroundColor(.secondary)
-            }.padding(32)
-        }.preferredColorScheme(.dark)
+        HStack(spacing: 0) {
+            sidebar
+            ScrollViewReader { proxy in
+                ScrollView { VStack(alignment: .leading, spacing: 24) {
+                    HStack { Text("LOCAL AI / BENCHMARK LAB").font(.system(size: 10, weight: .semibold, design: .monospaced)).tracking(1.5).foregroundColor(accent); Spacer(); Tag(text: "v0.4.0 · Apple Silicon") }
+                    VStack(alignment: .leading, spacing: 9) { Text(L(page == .discover ? "headline" : page.rawValue)).font(.system(size: 30, weight: .bold)); Text(L("subhead")).foregroundColor(muted) }
+                    switch page { case .discover: discovery; case .benchmark: benchmark; case .history: history; case .settings: settings }
+                    Label(L("privacy"), systemImage: "lock.shield").font(.caption).foregroundColor(muted)
+                }.padding(30).frame(maxWidth: 1120) }.background(canvas)
+                .onChange(of: bench.result?.id) { id in if id != nil && page == .benchmark { DispatchQueue.main.asyncAfter(deadline: .now()+0.2) { withAnimation { proxy.scrollTo("results", anchor: .top) } } } }
+            }
+        }.foregroundColor(ink).tint(accent).preferredColorScheme(.light)
+        .environment(\.locale, Locale(identifier: lang.code)).environment(\.layoutDirection, lang.rtl ? .rightToLeft : .leftToRight)
+        .sheet(isPresented: $showModel) { modelDetail }
+        .onReceive(timer) { _ in if !bench.running { bench.reloadHistory() } }
+        .onChange(of: bench.phase) { value in
+            captureLater(name: value == "測試完成" ? "complete" : value == "量度中" ? "running" : "state")
+            if value == "量度中" && CommandLine.arguments.contains("--stop-on-measurement") { bench.cancel() }
+            if value == "量度中" && CommandLine.arguments.contains("--quit-on-measurement") { NSApp.terminate(nil) }
+        }
+        .onChange(of: catalog.loading) { loading in if !loading { captureLater(name: "catalog"); if CommandLine.arguments.contains("--preview-model"), let model = catalog.models.first { catalog.select(model); showModel = true } } }
+        .onChange(of: page) { _ in captureLater(name: "page") }
+        .task {
+            guard !initialized else { return }; initialized = true
+            if let i = CommandLine.arguments.firstIndex(of: "--language"), CommandLine.arguments.indices.contains(i+1) { lang.code = CommandLine.arguments[i+1] }
+            if CommandLine.arguments.contains("--offline") || !catalog.online { catalog.setOnline(false) } else { catalog.refresh() }
+            if CommandLine.arguments.contains("--no-upload") { bench.uploads.enabled = false }
+            if let i = CommandLine.arguments.firstIndex(of: "--run-model"), CommandLine.arguments.indices.contains(i+1) { bench.add([URL(fileURLWithPath: CommandLine.arguments[i+1])]); bench.backend = "llama.cpp"; bench.trial = CommandLine.arguments.contains("--quick-trial"); page = .benchmark; bench.run() }
+            if let i = CommandLine.arguments.firstIndex(of: "--run-mlx"), CommandLine.arguments.indices.contains(i+1) { bench.mlxModel = URL(fileURLWithPath: CommandLine.arguments[i+1]); bench.backend = "oMLX"; page = .benchmark; bench.run() }
+            if CommandLine.arguments.contains("--show-settings") { page = .settings }
+            captureLater(name: "initial"); await bench.readRuntimeHash()
+        }
     }
+    private var phase: String { L(["準備就緒":"ready","檢查環境":"inspecting","驗證模型":"hashing","載入模型":"loading","準備工作負載":"inspecting","暖機中":"warmup","量度中":"measuring","關閉模型":"stopping","已停止":"stopped","正在停止":"stopping","測試失敗":"failed","測試完成":"complete","需要設定":"settings","無法啟動":"failed"][bench.phase] ?? "ready") }
+    private var sidebar: some View {
+        VStack(alignment: .leading, spacing: 28) {
+            Label("LOCAL / AI", systemImage: "waveform.path").font(.title2.bold()).padding(.top, 20)
+            ForEach(Page.allCases, id: \.self) { item in Button { page = item } label: { HStack { Image(systemName: item.icon).frame(width: 20); Text(L(item.rawValue)); Spacer() }.padding(13).background(page == item ? .white.opacity(0.14) : .clear, in: RoundedRectangle(cornerRadius: 12)) }.buttonStyle(.plain).foregroundColor(page == item ? .white : .white.opacity(0.6)) }
+            Spacer()
+            if bench.running { Text(phase); ProgressView(value: bench.progress).tint(.mint); Text("\(bench.completedSamples) / \(bench.totalSamples)").font(.caption) }
+            Text(catalog.device.chip).font(.headline)
+            Text("\(Int(catalog.device.memoryGiB)) GiB · \(catalog.device.cores) CPU").font(.caption).opacity(0.6)
+            Toggle(L("online"), isOn: Binding(get: { catalog.online }, set: { catalog.setOnline($0) })).toggleStyle(.switch).font(.caption).tint(.mint)
+        }.padding(20).frame(width: 220).frame(maxHeight: .infinity).foregroundColor(.white).background(ink)
+    }
+    private var deviceHero: some View {
+        HStack(spacing: 25) { Image(systemName: "cpu").font(.system(size: 40)).foregroundColor(.mint); VStack(alignment: .leading, spacing: 8) { Text(L("device")).font(.caption).opacity(0.6); Text(catalog.device.chip).font(.title2.bold()); Text("\(L("cores")): \(catalog.device.cores) · \(L("memory")): \(Int(catalog.device.memoryGiB)) GiB") }; Spacer(); Text(L("smallModels")).font(.callout).frame(maxWidth: 230) }.padding(25).foregroundColor(.white).background(LinearGradient(colors: [ink, Color(red: 0.07, green: 0.31, blue: 0.31)], startPoint: .leading, endPoint: .trailing), in: RoundedRectangle(cornerRadius: 19))
+    }
+    private var discovery: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            deviceHero
+            HStack { Text(L("trending")).font(.title3.bold()); Spacer(); TextField(L("search"), text: $catalog.query).textFieldStyle(.roundedBorder).frame(width: 220).onSubmit { catalog.refresh() }; Button(L("refresh")) { catalog.refresh() }.disabled(!catalog.online || catalog.loading) }
+            if catalog.loading { ProgressView(L("loadingCatalog")) }
+            if !catalog.online { Text(L("offlineHelp")).foregroundColor(muted) }
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
+                ForEach(catalog.models) { model in Panel {
+                    HStack { Tag(text: model.billions.map { String(format: "%.1fB", $0) } ?? "?"); Spacer(); Text(model.author).font(.caption).foregroundColor(muted) }
+                    Text(model.name).font(.headline).lineLimit(2).frame(height: 42, alignment: .topLeading)
+                    HStack { Label("\(model.downloads ?? 0)", systemImage: "arrow.down"); Label("\(model.likes ?? 0)", systemImage: "heart"); Spacer(); Button(L("details")) { catalog.select(model); showModel = true }.disabled(catalog.downloading) }.font(.caption)
+                } }
+            }
+            HStack { Button(L("hf")) { open("https://huggingface.co/models?library=gguf&sort=trending") }; Button(L("importGGUF")) { bench.chooseModels(); page = .benchmark }.disabled(bench.running) }
+            Panel(title: L("recommendation")) { Text(L("capacityHelp")).font(.callout).foregroundColor(muted); Button(L("community")) { Task { await catalog.fetchCommunity() } }.disabled(!catalog.online); DisclosureGroup(L("notes")) { Text(catalog.status + "\n" + catalog.communityStatus).font(.caption).textSelection(.enabled) } }
+            Panel(title: L("reference")) { Text(L("referenceHelp")).font(.callout).foregroundColor(muted); Button(L("openWebsite")) { open(siteOrigin + "/references") } }
+        }
+    }
+    private var modelDetail: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack { Text(catalog.selected?.name ?? L("model")).font(.title2.bold()); Spacer(); Button(L("done")) { showModel = false } }
+            if let model = catalog.selected { HStack { Text(L("license") + ": " + model.license); Spacer(); Button("Hugging Face ↗") { NSWorkspace.shared.open(model.webURL) } }.font(.caption) }
+            if catalog.loadingFiles { ProgressView() }
+            ScrollView { VStack(spacing: 12) { ForEach(catalog.files) { file in
+                let fit = catalog.device.fit(bytes: Double(file.size))
+                Panel { Text(file.path).font(.system(.callout, design: .monospaced)); HStack { Tag(text: file.displaySize); Tag(text: L(fit == .comfortable ? "comfortable" : fit == .tight ? "tight" : "tooLarge"), color: fit == .comfortable ? accent : .orange) }; if let hash = file.checksum, let evidence = bench.localEvidence(hash) { Label(L("localEvidence") + ": " + evidence, systemImage: "checkmark.seal").font(.caption) }; Button(L("download")) { catalog.download(file) { url in bench.add([url]); page = .benchmark } }.disabled(catalog.downloading || bench.running || bench.models.count >= 3 || fit == .tooLarge) }
+            } } }
+            if catalog.downloading { ProgressView(value: catalog.downloadProgress); HStack { Text("\(Int(catalog.downloadProgress*100))%"); Spacer(); Button(L("cancel")) { catalog.cancelDownload() } } }
+            DisclosureGroup(L("notes")) { Text(catalog.fileStatus + "\n" + catalog.downloadMessage).font(.caption).textSelection(.enabled) }
+        }.padding(28).frame(width: 720, height: 660).background(canvas)
+    }
+    private var benchmark: some View {
+        VStack(spacing: 20) {
+            Panel(title: "01 / " + L("selectModel")) {
+                Picker(L("runtime"), selection: $bench.backend) { Text("llama.cpp + GGUF").tag("llama.cpp"); Text("oMLX + MLX").tag("oMLX") }.pickerStyle(.segmented).disabled(bench.running)
+                if bench.backend == "oMLX" {
+                    HStack { Image(systemName: "folder"); Text(bench.mlxModel?.lastPathComponent ?? L("noModels")).lineLimit(2); Spacer(); Button(L("selectMLX")) { bench.chooseMLX() }.disabled(bench.running) }
+                    Button("Hugging Face · MLX ↗") { open("https://huggingface.co/models?library=mlx&sort=trending") }
+                    Text("1 → 2 → 3 · \(L("concurrent")) · 3 × · 128 max output").font(.caption).foregroundColor(muted)
+                } else {
+                    ForEach(bench.models, id: \.path) { url in HStack { Text(url.lastPathComponent).lineLimit(1); Spacer(); Button(L("remove")) { bench.models.removeAll { $0 == url } }.disabled(bench.running) } }
+                    HStack { Button(L("addModel")) { bench.chooseModels() }; Menu(L("queue")) { ForEach(bench.library, id: \.path) { url in Button(url.lastPathComponent) { bench.add([url]) } } }; Spacer(); Toggle(L("trial"), isOn: $bench.trial).toggleStyle(.switch) }.disabled(bench.running)
+                    Text(bench.trial ? "512 input / 32 output · 1 ×" : "512 + 2048 input / 128 output · 3 ×").font(.caption).foregroundColor(muted)
+                }
+                Divider(); UploadPanel(store: bench.uploads)
+                HStack { Spacer(); if bench.running { Button(L("stop")) { bench.cancel() }.disabled(bench.stopping) } else { Button { bench.run() } label: { Label(L("start"), systemImage: "play.fill").padding(.vertical, 5) }.buttonStyle(.borderedProminent).disabled(!bench.validSelection || catalog.downloading) } }
+            }
+            Panel(title: "02 / " + L("progress")) {
+                HStack { Text(phase).font(.title2.bold()); if bench.running { ProgressView().controlSize(.small) }; Spacer(); if let start = bench.started, bench.running { TimelineView(.periodic(from: .now, by: 1)) { _ in Text("\(Int(Date().timeIntervalSince(start))) s").monospacedDigit() } } }
+                ProgressView(value: bench.progress); Text("\(bench.completedSamples) / \(bench.totalSamples) · " + L("completed")).font(.caption).foregroundColor(muted)
+                if let sample = bench.latest { HStack { Metric(title: L("speed"), value: String(format: "%.1f", sample.decodeTps), unit: "tok/s"); Metric(title: L("ttft"), value: String(format: "%.0f", sample.ttftMs), unit: "ms"); if let n = sample.concurrency { Metric(title: L("concurrent"), value: "\(n)", unit: "") } } }
+                DisclosureGroup(L("events")) { Text(bench.events.isEmpty ? bench.message : bench.events.suffix(30).joined(separator: "\n")).font(.system(.caption, design: .monospaced)).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }
+            }
+            if let report = bench.result { results(report).id("results") }
+        }
+    }
+    private func results(_ report: RunReport) -> some View {
+        Panel(title: "03 / " + L("results")) {
+            HStack { Tag(text: report.isOMLX ? "oMLX · 1 / 2 / 3" : L(report.isTrial ? "trial" : "fullTest")); Spacer(); Button(L("assessment") + " ↓") { bench.exportCommentary() }; Button(L("export")) { bench.export() } }
+            ForEach(Array(report.models.enumerated()), id: \.offset) { index, model in
+                Text(model.modelName ?? "\(L("model")) \(index+1) · \(model.modelSha256.prefix(12))").font(.headline)
+                ForEach(report.isOMLX ? [1,2,3] : Array(Set(model.samples.map(\.inputTokens))).sorted(), id: \.self) { group in
+                    let rows = model.samples.filter { report.isOMLX ? $0.concurrency == group : $0.inputTokens == group }
+                    let speed = median(rows.map(\.decodeTps)); let wait = median(rows.map(\.ttftMs))
+                    VStack(alignment: .leading, spacing: 12) {
+                        Tag(text: report.isOMLX ? "\(L("concurrent")): \(group)" : "\(group) input", color: ink)
+                        HStack { Metric(title: L("perUser") + " · tok/s", value: String(format: "%.1f", speed), unit: ""); Metric(title: L("ttft"), value: String(format: "%.0f", wait), unit: "ms"); Metric(title: L("prefill"), value: String(format: "%.0f", median(rows.map(\.prefillTps))), unit: "tok/s") }
+                        Text(assessment(report.isOMLX ? rows.map(\.decodeTps).min() ?? speed : speed, report.isOMLX ? rows.map(\.ttftMs).max() ?? wait : wait)).font(.headline).foregroundColor(accent)
+                        if report.isOMLX {
+                            let worst = rows.map(\.decodeTps).min() ?? 0
+                            Text("\(L("worstUser")): \(String(format: "%.1f", worst)) tok/s · \(L("endToEnd")): \(String(format: "%.1f", median(rows.compactMap(\.endToEndTps)))) tok/s").font(.caption)
+                            if let groups = report.groups { Text("Σ \(String(format: "%.1f", median(groups.filter { $0.concurrency == group }.map(\.aggregateTps)))) tok/s · max \(L("ttft")): \(String(format: "%.0f", rows.map(\.ttftMs).max() ?? wait)) ms").font(.caption) }
+                            Text(L(worst >= 100 ? "targetMet" : "targetMiss")).font(.callout).foregroundColor(worst >= 100 ? accent : .orange)
+                        } else { Text(L(speed >= 100 ? "targetMet" : "targetMiss")).font(.callout).foregroundColor(.orange) }
+                    }.padding(18).background(canvas, in: RoundedRectangle(cornerRadius: 13))
+                }
+                if !report.isOMLX { Text(L("notTested")).font(.caption).foregroundColor(muted) }
+                Text("\(L("loadTime")): \(String(format: "%.2f", model.loadMs/1000)) s").font(.caption).foregroundColor(muted)
+            }
+            Divider(); Text(L("target")).font(.headline); Text(L("targetHelp")).font(.caption).foregroundColor(muted)
+            UploadStatus(store: bench.uploads)
+        }
+    }
+    private var history: some View {
+        VStack(spacing: 18) { HStack { Text("\(bench.history.count)"); Spacer(); Button(L("reportFolder")) { try? FileManager.default.createDirectory(at: reportsFolder, withIntermediateDirectories: true); NSWorkspace.shared.open(reportsFolder) } }; if bench.history.isEmpty { Text(L("noReports")) }; ForEach(bench.history) { item in Panel { HStack { VStack(alignment: .leading, spacing: 6) { Text(item.report.hardware.chip).font(.headline); Text(item.report.measuredAt).font(.caption).foregroundColor(muted) }; Spacer(); Tag(text: item.report.isOMLX ? "oMLX" : L(item.report.isTrial ? "trial" : "fullTest")); Button(L("view")) { bench.inspect(item); page = .benchmark }.disabled(bench.running) } } } }
+    }
+    private var settings: some View {
+        VStack(spacing: 20) {
+            Panel(title: L("language")) { Picker(L("language"), selection: $lang.code) { ForEach(LanguageStore.names, id: \.0) { code, name in Text(name).tag(code) } }.labelsHidden() }
+            deviceHero
+            Panel(title: L("runtime")) {
+                TextField(L("python"), text: $bench.python).textFieldStyle(.roundedBorder)
+                TextField("llama-server", text: $bench.server).textFieldStyle(.roundedBorder)
+                TextField("oMLX", text: $bench.omlx).textFieldStyle(.roundedBorder)
+                Text("brew install python llama.cpp").font(.system(.caption, design: .monospaced)).textSelection(.enabled)
+                Button("oMLX ↗") { open("https://omlx.ai/") }; Text(catalog.device.os).font(.caption).foregroundColor(muted)
+            }.disabled(bench.running)
+            Panel { UploadPanel(store: bench.uploads) }
+            Panel(title: L("reference")) { Text(L("referenceHelp")).font(.callout); Button(L("openWebsite")) { open(siteOrigin + "/references") } }
+        }
+    }
+    private func open(_ value: String) { if let url = URL(string: value) { NSWorkspace.shared.open(url) } }
+    private func captureLater(name: String) {
+        guard let index = CommandLine.arguments.firstIndex(of: "--capture-directory"), CommandLine.arguments.indices.contains(index+1) else { return }
+        let directory = URL(fileURLWithPath: CommandLine.arguments[index+1])
+        DispatchQueue.main.asyncAfter(deadline: .now()+0.7) {
+            guard let view = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil })?.contentView, let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }
+            view.cacheDisplay(in: view.bounds, to: bitmap); try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try? bitmap.representation(using: .png, properties: [:])?.write(to: directory.appendingPathComponent(name + ".png"))
+            let state: [String: Any] = ["phase": bench.phase, "running": bench.running, "completedSamples": bench.completedSamples, "totalSamples": bench.totalSamples, "report": bench.report?.path ?? ""]
+            if let data = try? JSONSerialization.data(withJSONObject: state) { try? data.write(to: directory.appendingPathComponent("state.json"), options: .atomic) }
+        }
+    }
+}
+struct UploadStatus: View {
+    @ObservedObject private var language = LanguageStore.shared
+    @ObservedObject var store: UploadStore
+    var body: some View { HStack { Label(L(store.status), systemImage: "icloud"); if store.pending > 0 { Text("\(L("pending")): \(store.pending)") } }.font(.caption).foregroundColor(muted) }
+}
+struct UploadPanel: View {
+    @ObservedObject private var language = LanguageStore.shared
+    @ObservedObject var store: UploadStore
+    var body: some View { VStack(alignment: .leading, spacing: 10) {
+        Toggle(L("autoUpload"), isOn: $store.enabled).toggleStyle(.switch)
+        if store.enabled { Toggle(L("publicShare"), isOn: $store.publish).font(.caption) }
+        Text(L("uploadHelp")).font(.caption).foregroundColor(muted)
+        UploadStatus(store: store)
+        HStack { Button(L(store.connected ? "accountConnected" : "connectAccount")) { store.connect() }; if store.pending > 0 { Button(L("retry")) { store.connected ? store.retry() : store.connect() }; Button(L("clearQueue")) { store.clearQueue() } } }
+    }.sheet(isPresented: $store.showAccount) { VStack { HStack { Text(L("connectAccount")).font(.headline); Spacer(); Button(L("done")) { store.showAccount = false } }.padding(); AccountWebView(store: store) }.frame(width: 850, height: 700) } }
 }

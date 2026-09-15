@@ -122,7 +122,7 @@ def measure_model(binary, path, threads, memory, trial=False):
             raise ValueError('The selected file is not a GGUF model.')
     if path.stat().st_size > memory * .65:
         raise ValueError('Model exceeds the initial 65% memory safety budget. Choose a smaller model.')
-    emit('progress', message='Hashing model for reproducible comparisons')
+    emit('progress', phase='hash', message='Hashing model for reproducible comparisons')
     fingerprint = sha256(path)
     # Reserve then release an ephemeral loopback port; health checks also check child exit.
     with socket.socket() as s:
@@ -133,6 +133,7 @@ def measure_model(binary, path, threads, memory, trial=False):
             '-c', '4096', '-ngl', '999', '-np', '1', '-b', '512', '-ub', '512',
             '-t', str(threads), '-tb', str(threads), '-fa', 'off', '-ctk', 'f16', '-ctv', 'f16',
             '--no-webui', '--no-warmup']
+    emit('progress', phase='load', message='Loading model into runtime')
     started = time.perf_counter()
     with tempfile.TemporaryFile() as log:
         proc = subprocess.Popen(args, stdout=log, stderr=log, env=runtime_env())
@@ -157,6 +158,7 @@ def measure_model(binary, path, threads, memory, trial=False):
                     raise ValueError('Model loading timed out after five minutes.')
                 time.sleep(.2)
             load_ms = (time.perf_counter()-started)*1000
+            emit('progress', phase='tokenize', message='Preparing exact-token workloads')
             with request(base, '/tokenize', {'content': PROMPT, 'add_special': True}) as res:
                 all_tokens = json.load(res)['tokens']
             if len(all_tokens) < max(inputs) or any(type(x) is not int or x < 0 for x in all_tokens):
@@ -164,17 +166,22 @@ def measure_model(binary, path, threads, memory, trial=False):
             samples = []
             for count in inputs:
                 tokens = all_tokens[:count]
-                emit('progress', message=f'Warm-up: {count} input tokens')
+                emit('progress', phase='warmup', message=f'Warm-up: {count} input tokens')
                 complete(base, tokens, output)
                 for repeat in range(repeats):
-                    emit('progress', message=f'{count} input tokens · measured run {repeat+1}/{repeats}')
+                    emit('progress', phase='measure', message=f'{count} input tokens · measured run {repeat+1}/{repeats}')
                     row = complete(base, tokens, output)
                     row['repeat'] = repeat + 1
                     samples.append(row)
+                    emit('sample', sample=row)
             result = {'modelSha256': fingerprint, 'modelBytes': path.stat().st_size,
                       'loadMs': load_ms, 'peakProcessRssBytes': monitor.peak, 'samples': samples}
             return result
         finally:
+            try:
+                emit('progress', phase='cleanup', message='Closing model process before continuing')
+            except OSError:
+                pass  # A closed UI/stdout pipe must never prevent child cleanup.
             if proc.poll() is None:
                 proc.terminate()
                 try:
@@ -214,8 +221,9 @@ def main():
         raise ValueError('Choose exactly one GGUF file for a trial.' if options.trial else 'Choose 1–3 different GGUF files; models run sequentially.')
     if options.output is None:
         raise ValueError('Choose an output report path.')
-    emit('progress', message='Inspecting runtime and hardware')
-    version = subprocess.run([str(options.server), '--version'], capture_output=True, text=True, timeout=20, check=True, env=runtime_env())
+    emit('progress', phase='inspect', message='Inspecting runtime and hardware')
+    # First launch can compile Metal shaders, including for --version.
+    version = subprocess.run([str(options.server), '--version'], capture_output=True, text=True, timeout=180, check=True, env=runtime_env())
     # Public record uses hashes, not arbitrary binary output or local file names.
     version_hash = hashlib.sha256((version.stdout + version.stderr).encode()).hexdigest()
     report = {'specVersion': TRIAL_SPEC if options.trial else SPEC, 'runnerVersion': '0.2.1', 'runId': str(uuid.uuid4()),

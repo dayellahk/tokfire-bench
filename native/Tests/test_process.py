@@ -16,7 +16,7 @@ class ProcessTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
-        self.folder = Path(self.temp.name)
+        self.folder = Path(self.temp.name).resolve()
         self.binary = self.folder / 'llama-server'
         fixture = Path(__file__).with_name('fake_llama_server.py')
         self.binary.write_text(f'#!{sys.executable}\n' + fixture.read_text())
@@ -41,6 +41,16 @@ class ProcessTests(unittest.TestCase):
         self.assertGreater(result['samples'][0]['ttftMs'], 0)
         self.assertEqual(len(self.calls.read_text().splitlines()), 2)
         self.assertNotIn('synthetic private text', json.dumps(result))
+        self.assert_child_stopped()
+
+    def test_closed_progress_pipe_does_not_prevent_cleanup(self):
+        real_emit = runner.emit
+        def emit(kind, **values):
+            if values.get('phase') == 'cleanup':
+                raise BrokenPipeError('GUI closed its output pipe')
+            return real_emit(kind, **values)
+        with patch.object(runner, 'emit', side_effect=emit):
+            runner.measure_model(self.binary, self.model, 2, 8 * 1024**3, trial=True)
         self.assert_child_stopped()
 
     def test_three_selected_models_run_sequentially_and_export_one_report(self):

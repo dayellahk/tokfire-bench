@@ -1,108 +1,76 @@
-# Local AI Bench — macOS developer alpha 0.2.1
+# Local AI Bench 0.4.0 (macOS Apple Silicon)
 
-This is real benchmark source, not an installer. It has not yet been compiled or calibrated on an Apple Silicon Mac in this project. The development environment is Linux; no performance numbers have been invented.
+A native SwiftUI benchmark lab with a live Hugging Face GGUF catalogue,
+hardware capacity estimates, visible progress, local history, readable assessments,
+and 20 UI languages (including Arabic/Urdu right-to-left layouts).
 
-## Requirements
+## Run locally
 
-- Apple Silicon Mac, macOS 13+.
-- Xcode command-line tools with Swift 5.9+.
-- Python 3.10+ and a current `llama-server` built with Metal support.
-- One **single-file GGUF** for a trial, or one to three for the full suite. MLX weights and split GGUF sets are not supported. Only the dedicated MiniCPM trial launcher downloads a model, when you explicitly run it.
-- Sufficient free memory and disk. Each model file must be less than 65% of physical memory; the check does not guarantee that KV caches and runtime allocations fit.
+- Install Python 3.10+ and Metal-enabled llama.cpp for GGUF tests.
+- For MLX, install oMLX and download an MLX model folder separately.
+- Build with `bash build-app.sh`; create the disk image with `bash build-dmg.sh`.
+- Choose **llama.cpp + GGUF** or **oMLX + MLX** in the benchmark workspace.
+- oMLX starts a separate loopback instance with temporary settings and cache disabled.
+  Existing oMLX service, API key, model settings and caches are not modified.
+- Choose the folder containing `config.json` and `.safetensors` files, not its parent.
 
-If Homebrew is already installed, `brew install llama.cpp python` provides the two external executables. Otherwise install/build them from their official projects. The app allows selecting their paths rather than assuming a package-manager location.
+## Measurement profiles
 
-Official llama.cpp build instructions: https://github.com/ggml-org/llama.cpp/blob/master/docs/build.md
-Official llama-server reference: https://github.com/ggml-org/llama.cpp/tree/master/tools/server
+- `local-ai-text-v1`: exact 512/2048 input tokens, 128 output tokens, 3 measured runs
+  per workload plus discarded warm-ups. Selected GGUFs run sequentially.
+- `local-ai-trial-v1`: one GGUF, 512 input/32 output, one measured run.
+- `local-ai-omlx-v1`: MLX text-completion serving workload, max 128 output tokens,
+  actual server-reported input/output counts, 1/2/3 concurrent requests × 3 rounds,
+  one discarded warm-up. 18 measured requests. Cache hits and incomplete streams fail.
+  oMLX decode/prefill rates come from usage; first-text latency and end-to-end rates
+  are client timings. Aggregate throughput uses actual group makespan.
+  Total startup plus discarded warm-up is reported as load/warm-up time.
 
-## First trial: MiniCPM5-2B
+These profiles are separate. oMLX results do not enter the exact-token llama.cpp
+leaderboard. Output may stop before 128 tokens; actual counts and finish reason
+remain in the report. Model manifest hashes cover weights, configuration and tokenizer.
+Runtime identity records oMLX version and the selected executable/launcher fingerprint.
 
-This is the shortest path to an actual measurement on your Mac. It exercises the same Python runner used by the app, without requiring a Swift build. It does not validate the SwiftUI interface or establish a stable benchmark score.
+The 100–200 tok/s target is user-selected, **not a measured/guaranteed ChatGPT plan
+speed**. Assessments also consider first-text wait. For concurrent tests, the
+slowest sampled request determines target attainment. These short bursts do not
+prove long-running server capacity, answer quality, or every family workload.
 
-1. Install Python and llama.cpp if needed: `brew install llama.cpp python` (requires Homebrew already installed).
-2. Open Terminal in this extracted `native` folder and run:
+## Storage and upload
 
-```sh
-python3 trial-minicpm.py
-```
+JSON and Markdown reports are saved in:
+`~/Library/Application Support/LocalAIBench/Reports/`
 
-The launcher checks for Apple Silicon and the runtime **before downloading**. It downloads the official [MiniCPM5-2B Q4_K_M GGUF](https://huggingface.co/openbmb/MiniCPM5-2B-GGUF/blob/main/MiniCPM5-2B-Q4_K_M.gguf), approximately 1.56 GB, and verifies SHA-256 `ec2d5801640099e97d8d7e8003ad4d81f336e757811f03a26173dddf386602fd`. The download is pinned to revision `2079a22f3beaa4e306449978533478fe0522f4b3`. A failed download is removed; rerunning retries. Verified models are reused.
+Automatic upload is ON by default and visible before Run. Public sharing is a
+separate switch, OFF by default. Connect the website account once in the app.
+Reports contain hardware, runtime/model fingerprints, model name for MLX, timing
+and concurrency measurements. Prompts, generated text and local paths are excluded.
+Failed/offline uploads remain in a local Outbox. Turning upload off prevents queued
+uploads from starting; an already-sent request cannot be recalled. Clear the queue
+to discard pending uploads, or delete saved records in the website's My data page.
+Trials are stored separately from standard comparisons.
 
-It performs one discarded warm-up and one measured run, each with 512 input tokens and 32 output tokens. It prints measured decode speed, TTFT and prefill speed, then saves a local JSON report. Ctrl+C stops the runner and closes its model server. No report is uploaded. Download requests go to Hugging Face and its download infrastructure.
+## External reference data
 
-Files live under `~/Library/Application Support/LocalAIBench/Models/` and `Reports/`. To use an existing official file or a different runtime path:
+`../data/omlx-reference.json` contains an attributed **partial snapshot**: latest
+10 pages/100 records from each public oMLX board at its recorded fetch time.
+The performance source's default filter excludes SpecPrefill, not all accelerators.
+Intelligence records identify author/model/task/score/sample coverage, not hardware.
+Re-fetch with `python scripts/import-omlx.py` from the project root, deploy, then
+use the authenticated reference-page import button. The importer is bounded and
+idempotent, preserves source links/notes, and never treats external scores as local runs.
 
-```sh
-python3 trial-minicpm.py --server /path/to/llama-server --model /path/to/MiniCPM5-2B-Q4_K_M.gguf
-```
+## Validation
 
-Trial reports carry `local-ai-trial-v1` and are rejected by the comparison database. They are for checking that the runtime works; one short run cannot establish sustained performance. For the GUI trial, build the app below, enable **Quick trial** and select the downloaded GGUF. Leave Quick trial off to run the standard suite with one to three selected models, tested sequentially.
+- `swift test` for native unit tests.
+- `LOCALAI_TEST_SITE=1 swift test --filter UploadTests` with local site on port 5173
+  for real WKWebView login, upload, database read and owner deletion.
+- `python -m unittest discover -s Tests -v` for runner/protocol/cleanup tests.
+- `python Packaging/smoke-gui.py` for opt-in real GUI GGUF lifecycle tests.
+- Set `LOCALAI_ENGINE=omlx` for real MLX lifecycle tests with the installed test model.
+- `--capture-directory /path` records the app's own view for QA without screen access.
 
-If the model fails to load, the app/terminal shows the tail of llama-server's local startup log. Check for an incompatible runtime version or unsupported flag; update llama.cpp and retry. Diagnostic logs are not included in exported reports. Review local errors for file paths before sharing them.
-
-## Build and run
-
-Open `Package.swift` in Xcode and run the LocalAIBench executable, or:
-
-```sh
-cd native
-swift run LocalAIBench
-```
-
-To assemble an unsigned `.app` locally:
-
-```sh
-bash build-app.sh
-open build/LocalAIBench.app
-```
-
-The app is a developer build. It is not signed with a Developer ID or notarized; do not distribute it as a consumer-ready installer. No instruction requires disabling macOS security.
-
-## Use
-
-1. Select Python and llama-server executables if their paths differ from `/opt/homebrew/bin/`.
-2. Choose one to three distinct GGUF files. Three selections create three sequential model rounds; only one model runs at a time. Their content hashes must differ.
-3. Close memory-intensive applications, keep the power configuration consistent, and click Run benchmark.
-4. For each model, the runner hashes its bytes, starts a dedicated loopback-only llama-server, warms up each workload, runs three repetitions, and closes the model process before loading the next model.
-5. Inspect measurements and export the JSON report. Reports also remain in `~/Library/Application Support/LocalAIBench/Reports/`.
-6. Open the project website, choose the JSON report, and review it locally. Explicitly choose collection and optionally publication. No report is automatically uploaded by the Mac app.
-7. Use My data on the website to hide or delete a stored report. The website is currently owner-private; publication consent does not grant additional visitors access.
-
-The browser-based authenticated upload is intentional for this alpha. Native OAuth/direct submission is not implemented, and no private-site access token is embedded in the app.
-
-## CLI usage
-
-```sh
-python3 Sources/LocalAIBench/Resources/runner.py \
-  --server /opt/homebrew/bin/llama-server \
-  --output report.json \
-  --models /path/to/first.gguf /path/to/second.gguf /path/to/third.gguf
-```
-
-The full suite also accepts a single path after `--models`. Each selected model has its own warm-up and measurements, and its server closes before the next model starts. `--trial` restricts selection to one model and uses the shorter workload described above.
-
-`--hardware` prints allowlisted hardware fields. The runner uses Python's standard library only. It bypasses HTTP proxies for loopback calls. It has no remote-upload or model-download code. stdout is JSON-lines progress followed by a complete report. Stop with Ctrl+C; model processes are terminated and waited for. Partial suites do not produce an uploadable report.
-
-## Metrics and comparability
-
-- Specification `local-ai-text-v1`: 512 and 2,048 input tokens; 128 output tokens. Same fixed synthetic source text, tokenized per model and sliced to exact lengths.
-- One discarded warm-up and three measured runs per workload. Temperature 0, seed 42, EOS ignored, prompt cache off.
-- Context 4,096, one slot, CPU threads equal to logical cores, GPU-layer request 999, f16 KV cache, flash attention off, batch and microbatch 512.
-- TTFT is client wall time to the first streamed token ID, including loopback HTTP overhead. Prefill/decode rates use final llama.cpp timings.
-- A report is rejected if the engine caches prompt tokens, produces the wrong token counts, truncates context, or omits timings.
-- Load time includes launching the server and loading until `/health` is ready. It does not flush OS caches and is not a guaranteed cold disk load.
-- Peak process RSS is sampled every 250 ms over a model session. **It is not peak unified/Metal memory.** Power, temperature, swap and sustained performance are not measured in this release.
-- Models and runtime binaries use SHA-256 identity. These exact hashes and settings define comparison groups. File paths, filenames, serial numbers, Apple ID, prompts and generated text are absent from the exported report.
-- Scores are not independently attested. No global score or reference-based hardware predictions are available yet. The fastest selected model is not necessarily the highest-quality model.
-
-## Tests
-
-```sh
-python3 -m unittest discover -s Tests -v
-```
-
-Tests use synthetic SSE fixtures, a real loopback HTTP fixture process, and a mocked download to verify timing extraction, cache/truncation/short-output rejection, output privacy, startup diagnostics, cancellation, child cleanup, trial workload selection and checksum handling. They perform no LLM inference and do not establish Metal compatibility. Backend contract/SQL tests verify that trials cannot enter comparisons.
-
-## Required before consumer release
-
-Compile and run on real Apple Silicon; record the exact llama.cpp build; verify actual Metal offload and process cancellation; test low-memory and incompatible models; compare timings against runtime logs; calibrate across a small Mac fleet. Add catalog manifests with model licensing and checksums, managed downloads, runtime packaging, sustained/thermal measurements, direct authenticated uploads, signing/notarization and deployment access controls for customer use.
+Developer distribution only: the DMG is ad-hoc signed, not Developer ID signed or
+notarized. It bundles neither inference runtimes nor model weights. UI translations
+are initial translations; professional/native-speaker review remains advisable.
+Technical logs and website sign-in retain their own language.

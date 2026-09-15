@@ -1,0 +1,46 @@
+{
+  "specVersion": "local-ai-trial-v1",
+  "runnerVersion": "0.2.1",
+  "runId": "79e68b9a-ca18-4e96-a546-37d3dcfefa7d",
+  "measuredAt": "2026-09-15T13:57:26Z",
+  "hardware": {
+    "chip": "Apple M2 Max",
+    "machine": "Mac14,5",
+    "cpuCores": 12,
+    "memoryBytes": 103079215104,
+    "osVersion": "26.5.2"
+  },
+  "runtime": {
+    "name": "llama.cpp",
+    "binarySha256": "8939a1cf8a4e9a5cc18d6cd4d2d55440b48f8a44db00abe459a28d837ea051f7",
+    "versionSha256": "7c5ca7b75fb955378e952c53c023c9b80702752252c8bce900c3c0cdf532e62d",
+    "threads": 12,
+    "contextTokens": 4096,
+    "gpuLayers": 999,
+    "batchTokens": 512,
+    "ubatchTokens": 512,
+    "flashAttention": false,
+    "kvCache": "f16"
+  },
+  "models": [
+    {
+      "modelSha256": "ec2d5801640099e97d8d7e8003ad4d81f336e757811f03a26173dddf386602fd",
+      "modelBytes": 1561318368,
+      "loadMs": 828.787749982439,
+      "peakProcessRssBytes": 1885257728,
+      "samples": [
+        {
+          "inputTokens": 512,
+          "outputTokens": 32,
+          "ttftMs": 758.2991670351475,
+          "prefillTps": 677.6134770967968,
+          "decodeTps": 54.695232869364844,
+          "prefillMs": 755.593,
+          "decodeMs": 566.777,
+          "elapsedMs": 1325.554250041023,
+          "repeat": 1
+        }
+      ]
+    }
+  ]
+}
