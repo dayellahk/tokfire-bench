@@ -1,0 +1,2 @@
+import { integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+export const benchmarkResults = sqliteTable("benchmark_results", { id: integer("id").primaryKey({ autoIncrement: true }), createdAt: integer("created_at", { mode: "timestamp" }).notNull(), hardware: text("hardware").notNull(), memoryGb: integer("memory_gb").notNull(), score: integer("score").notNull(), modelCount: integer("model_count").notNull(), decodeTps: real("decode_tps").notNull(), ttftMs: real("ttft_ms").notNull(), prefillTps: real("prefill_tps").notNull() });
