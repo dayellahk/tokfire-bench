@@ -369,5 +369,9 @@
   "External oMLX rows supply reference speed or quality scores. Without per-job latency, completion and tool results, they cannot receive an A / B / C grade. A fast generation signal is not an agent-readiness claim.": "oMLX 外部紀錄提供參考速度或能力分數。欠缺每個 job 嘅延遲、完成情況同工具結果，就無法獲得 A／B／C 評級。生成速度快唔代表已適合 agent 工作。",
   "The optional 100–200 tok/s range is a user target, not a promised speed for any cloud subscription. Total throughput across jobs is never substituted for each job’s speed.": "100–200 tok/s 係用戶設定嘅目標，唔係任何雲端訂閱嘅保證速度。多個 jobs 嘅總吞吐量唔會代替每個 job 嘅速度。",
   "Legacy fixed-token workload": "舊版固定 token 工作負載",
-  "TOKFIRE / METHODOLOGY": "TOKFIRE / 測試方法"
+  "TOKFIRE / METHODOLOGY": "TOKFIRE / 測試方法",
+  "· Failed": "· 失敗",
+  "· Tool errors": "· 工具錯誤",
+  "· Visible timing coverage": "· 可見輸出延遲覆蓋",
+  "concurrent job": "個並行 job"
 }
