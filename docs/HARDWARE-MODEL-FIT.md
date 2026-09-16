@@ -57,3 +57,11 @@ outliers hidden by averages, remote attribution, unknown prompt hashes, target
 separation, untested concurrency, actual 0.7 report compatibility and parity with
 the shipped Python profile fingerprints and interaction assessor. UI validation
 uses local report preview; no fixture is published to the community database.
+
+Validation on 16 September 2026: all 36 backend tests, TypeScript and targeted lint
+pass locally and in [portal CI](https://github.com/dayellahk/tokfire-bench/actions/runs/35054331795).
+Ego Browser checks cover a real Mac report (C / one tested job), local synthetic
+parallel-tool and single-passing-level cases (A / 3 and B / 1, with failed levels
+visible), invalid JSON rejection, no network requests during local preview,
+reference filtering/pagination, both Chinese locales and a 390 px mobile layout
+without page-level horizontal overflow. Synthetic QA reports are not published.
