@@ -2,6 +2,11 @@
 :root[data-theme=light]{color-scheme:light;--ink:#262821;--muted:#5c6256;--line:#d7d7cd;--panel:#fff;--acid:#a84615;--orange:#ab3a17;--bg:#f7f7f2;--primary:#a84615;--primary-foreground:#fff;--ring:#a84615;--background:#f7f7f2;--foreground:#262821;--accent:#edece3;--border:#d7d7cd}
 .display-controls{position:fixed;right:18px;bottom:16px;z-index:50;display:flex;align-items:stretch;gap:8px;max-width:calc(100vw - 24px)}
 .display-controls .language-switcher{position:static;box-shadow:none}
+.github-link{display:flex;align-items:center;justify-content:center;flex-shrink:0;width:40px;min-height:40px;border:1px solid #5b4030;border-radius:10px;background:#211a16;color:#f3decc;text-decoration:none;box-shadow:0 4px 20px #0002;transition:color .15s,border-color .15s}
+.github-link:hover{color:var(--acid);border-color:currentColor}
+[data-theme=light] .github-link{background:#fffdf8;border-color:#c5c7bb;color:#30372b}
+[data-theme=light] .github-link:hover{color:var(--acid);border-color:currentColor}
+@media(max-width:380px){.github-link{position:absolute;right:0;bottom:calc(100% + 8px)}}
 .theme-switcher{display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:10px 14px;border:1px solid #5b4030;border-radius:10px;background:#211a16;color:#f3decc;cursor:pointer;font-size:12px;box-shadow:0 4px 20px #0002}
 .theme-switcher>span{align-items:center;gap:8px;white-space:nowrap}.theme-to-light{display:flex}.theme-to-dark{display:none}
 [data-theme=light] .theme-to-light{display:none}[data-theme=light] .theme-to-dark{display:flex}
