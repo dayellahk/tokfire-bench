@@ -21,9 +21,9 @@ export function ComparisonData(){
   return()=>{alive=false;};
  },[]);
  async function inspect(file:File|undefined){if(!file)return;const id=++importId.current;setPreview(null);setImportStatus('Checking report locally…');try{
-  if(file.size>1_500_000)throw Error();const summary=await publicWorkloadSummary(JSON.parse(await file.text()));if(!summary)throw Error();
+  if(file.size>4_000_000)throw Error();const summary=await publicWorkloadSummary(JSON.parse(await file.text()));if(!summary)throw Error();
   if(id===importId.current){setPreview(summary);setImportStatus('');}
- }catch{if(id===importId.current)setImportStatus('Choose a valid TokFire 0.7 workload JSON report, up to 1.5 MB.');}}
+ }catch{if(id===importId.current)setImportStatus('Choose a valid TokFire workload JSON report, up to 4 MB.');}}
  function reset(){setQuery('');setPlatform('all');setMemory('all');setPurpose('all');}
  const publicRuns=findWorkloadResults(runs,{query,platform,memory,purpose});
  const localRuns=runs.filter(r=>r.location!=='remote-server');
@@ -68,7 +68,7 @@ export function ComparisonData(){
   <div className="finder-more">
    <details ref={picksRef} className="finder-resource" id="setups"><summary><Cpu size={20}/><span><b>Need a starting configuration?</b><small>6 curated PC &amp; Mac setups · Not measured recommendations</small></span><ChevronDown size={18}/></summary><HardwarePicks compact embedded/></details>
    <details className="finder-resource"><summary><Users size={20}/><span><b>Earlier community tests</b><small>Browse older test profiles separately</small></span><ChevronDown size={18}/></summary><PublicArchive/></details>
-   <details className="finder-resource"><summary><FileJson size={20}/><span><b>Already have a report?</b><small>Preview a 0.7 JSON file locally</small></span><ChevronDown size={18}/></summary><div className="finder-import"><label className="fit-import"><FileJson size={17}/><span>Open 0.7 JSON</span><input type="file" accept=".json,application/json" aria-label="Open 0.7 workload report" onChange={e=>{void inspect(e.target.files?.[0]);e.target.value='';}}/></label><p>Local preview stays in this browser. Opening a report does not upload or publish it.</p>{importStatus&&<p role="status">{importStatus}</p>}{preview&&<><button type="button" onClick={()=>{importId.current++;setPreview(null);}}>Close preview</button><WorkloadFitView run={preview} local/></>}</div></details>
+   <details className="finder-resource"><summary><FileJson size={20}/><span><b>Already have a report?</b><small>Preview a workload JSON file locally</small></span><ChevronDown size={18}/></summary><div className="finder-import"><label className="fit-import"><FileJson size={17}/><span>Open workload JSON</span><input type="file" accept=".json,application/json" aria-label="Open workload report" onChange={e=>{void inspect(e.target.files?.[0]);e.target.value='';}}/></label><p>Local preview stays in this browser. Opening a report does not upload or publish it.</p>{importStatus&&<p role="status">{importStatus}</p>}{preview&&<><button type="button" onClick={()=>{importId.current++;setPreview(null);}}>Close preview</button><WorkloadFitView run={preview} local/></>}</div></details>
   </div>
  </div>,locale);
 }

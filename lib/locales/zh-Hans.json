@@ -678,5 +678,12 @@
   "Desktop 0.8 adds CSV analysis, multi-page research and retry simulations with verified task checks. These are TokFire simulations, not actual third-party agent runs. Android 0.7 retains the original profiles.": "桌面版 0.8 加入 CSV 分析、多页研究及重试模拟，并验证任务结果。这些是 TokFire 模拟，并非真正运行第三方 agent。Android 0.7 保留原有测试。",
   "Task deadline": "任务时限",
   "The workload fingerprint does not match a shipped workload profile.": "工作负载指纹不符合已发布的测试定义。",
-  "TokFire fit v1 uses the same interaction guideline across apps 0.7 and 0.8: every task completes, every request decodes at least 30 tok/s, and every request produces visible output within 3 seconds. Missing runtime metrics remain unknown.": "TokFire fit v1 在 app 0.7 与 0.8 使用相同交互指引：所有任务完成，每个请求至少 30 tok/s，并在 3 秒内产生可见输出。缺少的 runtime 数据保留为未知。"
+  "TokFire fit v1 uses the same interaction guideline across apps 0.7 and 0.8: every task completes, every request decodes at least 30 tok/s, and every request produces visible output within 3 seconds. Missing runtime metrics remain unknown.": "TokFire fit v1 在 app 0.7 与 0.8 使用相同交互指引：所有任务完成，每个请求至少 30 tok/s，并在 3 秒内产生可见输出。缺少的 runtime 数据保留为未知。",
+  "Choose a valid TokFire workload JSON report, up to 4 MB.": "请选择有效的 TokFire 工作负载 JSON 报告，上限 4 MB。",
+  "Preview a workload JSON file locally": "在本机预览 JSON 报告",
+  "Open workload JSON": "打开 JSON",
+  "Open workload report": "打开 工作负载报告",
+  "Review standard GGUF or workload reports locally, then choose whether to upload. Workload results remain separate from legacy synthetic rankings.": "先在本地查看标准 GGUF 或 工作负载报告，再选择是否上传。工作负载结果与旧版合成测试排行分开。",
+  "Workload benchmark": "工作负载测试 ·",
+  "Earlier app reports use different test profiles. These measurements are public, but are not mixed into current workload grades. oMLX entries here are tests run in the TokFire app, not imported third-party records.": "较早版本的报告使用不同测试规格。这些测量现已公开，但不会混入 工作负载评级。这里的 oMLX 项目是在 TokFire 程式内执行的测试，并非汇入的第三方纪录。"
 }

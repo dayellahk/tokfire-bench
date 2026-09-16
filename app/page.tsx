@@ -98,13 +98,13 @@ export default function Home() {const locale=useLocale();
       {tab==='benchmark'&&<>
         <LandingPage/>
         <div className="landing-review" id="review">
-          <aside className="panel run-panel"><span className="panel-index">02 / REVIEW</span><h2>Bring your results.</h2><p>Review standard GGUF or 0.7 workload reports locally, then choose whether to upload. Workload results remain separate from legacy synthetic rankings.</p>
+          <aside className="panel run-panel"><span className="panel-index">02 / REVIEW</span><h2>Bring your results.</h2><p>Review standard GGUF or workload reports locally, then choose whether to upload. Workload results remain separate from legacy synthetic rankings.</p>
             <label className="file-picker"><FileUp size={22}/><b>Choose a benchmark report</b><small>JSON · up to 1.5 MB (workload reports)</small><input type="file" accept="application/json,.json" disabled={busy} onChange={e=>{void importFile(e.target.files?.[0]);e.target.value='';}}/></label>
             <div className="run-note"><LockKeyhole size={15}/><span>Choosing a file does not send it to the server.</span></div>
           </aside>
         </div>
         {workloadReport&&<section className="panel imported">
-          <h2>Workload benchmark · 0.7</h2><p data-no-translate>{workloadReport.hardware.platform} · {workloadReport.hardware.chip} · {workloadReport.settings.workload}</p>
+          <h2>Workload benchmark</h2><p data-no-translate>{workloadReport.hardware.platform} · {workloadReport.hardware.chip} · {workloadReport.settings.workload}</p>
           {workloadReport.settings.inferenceLocation==='remote-server'&&<p className="notice">Remote server test: this hardware is the request client, not the inference host.</p>}
           <div className="table-scroll"><table><thead><tr><th>Concurrent jobs</th><th>Complete / attempts</th><th>P95 task latency</th><th>P99 task latency</th><th>First output</th></tr></thead><tbody>{workloadSummary(workloadReport).map(row=><tr key={row.jobs}><td>{row.jobs}</td><td>{row.complete} / {row.attempts}</td><td>{fmt(row.p95Ms??0)} ms</td><td>{fmt(row.p99Ms??0)} ms</td><td>{row.ttftMs===null?'Unavailable':fmt(row.ttftMs)+' ms'}</td></tr>)}</tbody></table></div>
           <p>Small-sample P95/P99 are descriptive, not an SLA. Chat completion does not grade answer quality. Agent success checks a local tool fixture, not Hermes or OpenClaw.</p>
