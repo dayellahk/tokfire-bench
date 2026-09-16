@@ -170,7 +170,7 @@
   "Measurements you can inspect.": "可以檢查的測量結果。",
   "Fixed workload": "固定工作負載",
   "Select one to three models. Each model completes a separate round and its server closes before the next starts; models never run concurrently. The runner tokenizes a fixed synthetic text with each model’s tokenizer, then uses exactly 512 or 2,048 input token IDs. Each workload generates 128 tokens with temperature 0, seed 42, EOS ignored and prompt cache disabled. One warm-up is discarded; three measured repetitions are retained. Context is 4,096, KV cache f16, flash attention off, batch and microbatch 512, one slot, GPU layer request 999, CPU threads equal to detected logical cores.": "選擇一至三個模型。每個模型分開測試，關閉其伺服器後才啟動下一個；模型不會同時執行。程式使用各模型的 tokenizer 處理固定合成文字，再使用剛好 512 或 2,048 個輸入 token ID。每組工作產生 128 個 token，temperature 為 0、seed 為 42、忽略 EOS，並停用提示詞快取。捨棄一次暖機結果，保留三次正式測量。上下文為 4,096、KV 快取為 f16、關閉 flash attention、batch 及 microbatch 為 512、單一 slot、請求 GPU 層數為 999，CPU 執行緒數等於偵測到的邏輯核心數。",
-  "Concurrent jobs": "並行 jobs",
+  "Concurrent jobs": "並行任務",
   "TokFire Bench also provides a separate concurrent profile: one GGUF or MLX model, 1–3 free simultaneous jobs, or up to 20 with Pro. It measures three synchronized rounds and reports each job’s latency and speed separately from aggregate throughput. These results are not mixed with the sequential standard profile.": "TokFire Bench 亦提供獨立並行測試：同一 GGUF 或 MLX 模型，免費可同時執行 1–3 個工作，Pro 最多 20 個。測量三輪同步請求，分別報告每個工作的延遲與速度，以及總吞吐量。結果不會混入依序執行的標準測試。",
   "Windows preview": "Windows 預覽版",
   "Windows 10/11 x64 uses llama.cpp and GGUF with 512 input tokens, 128 output tokens and three synchronized measured rounds after warm-up. Each job shares one model server, with 4,096 context tokens per slot. Reports use local-ai-windows-jobs-v1 and include CPU, computer model, GPU names, RAM and Windows version. They are stored separately from the Mac standard comparison table. GPU names do not prove that GPU offloading succeeded. The Windows executable is unsigned and has been cross-compiled and unit-tested on macOS; Windows GUI, login, cancellation and CPU/GPU inference tests remain pending.": "Windows 10／11 x64 使用 llama.cpp 及 GGUF，輸入 512 個 token、輸出 128 個 token，暖機後進行三輪同步測量。每個工作共用同一模型伺服器，每個 slot 配置 4,096 個上下文 token。報告使用 local-ai-windows-jobs-v1，包含 CPU、機型、GPU 名稱、RAM 及 Windows 版本，與 Mac 標準比較表分開儲存。GPU 名稱不代表已成功啟用 GPU 加速。Windows 執行檔尚未簽署，已在 macOS 交叉編譯及通過單元測試；Windows 介面、登入、取消及 CPU／GPU 推論測試仍待完成。",
@@ -539,5 +539,15 @@
   "LEARN / BUILD / MEASURE": "學習／建立／量度",
   "Make local AI part of your day.": "讓本地 AI 融入日常。",
   "Six practical guides: your first assistant, private document Q&A, Mac MLX, GPU memory, tool agents and concurrent jobs.": "六篇實用教學：第一個助手、私人文件問答、Mac MLX、GPU 記憶體、工具 agent 及並行 job。",
-  "Explore the guides": "探索實用指南"
+  "Explore the guides": "探索實用指南",
+  "LOCAL INFERENCE": "本地推理",
+  "ONE MODEL": "同一模型",
+  "JOB": "任務",
+  "LOCAL": "本地",
+  "OUTPUT": "輸出",
+  "Preview concurrent jobs": "預覽並行任務",
+  "Interactive illustration · not benchmark results": "互動示意圖 · 並非實測結果",
+  "Explore real measurements": "查看真實測量結果",
+  "Pause animation": "暫停動畫",
+  "Resume animation": "恢復動畫"
 }
