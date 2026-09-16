@@ -39,10 +39,6 @@ Web portal languages: English (`/`), Traditional Chinese (`/zh-Hant`) and Simpli
 
 The current deployment uses Node.js, Next.js, Nginx and MySQL on Linode. Inference happens on the user's device. Historical Sites/Cloudflare helpers and migrations remain for provenance; they are not the live hosting configuration.
 
-## Cloudflare static mirror
-
-https://tokfire-bench.pages.dev contains synchronized public pages. Login, uploads and live data remain on tokfires.com. See [export and deployment instructions](deploy/CLOUDFLARE-STATIC.md).
-
 ## Web development
 
 Use Node.js 22.13+ (Node 24+ for the test suite), pnpm as pinned in `package.json`, and a local MySQL database.
