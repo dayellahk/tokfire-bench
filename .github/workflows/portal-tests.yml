@@ -2,7 +2,7 @@ name: Portal report and fit tests
 on:
   workflow_dispatch:
   push:
-    paths: ['app/**', 'components/**', 'lib/**', 'tests/**', 'native/Sources/LocalAIBench/Resources/workload_core.py', '.github/workflows/portal-tests.yml']
+    paths: ['app/**', 'components/**', 'lib/**', 'tests/**', 'build/**', 'scripts/**', 'public/*.js', 'vite.config.ts', 'next.config.ts', 'tsconfig.json', 'package.json', 'pnpm-lock.yaml', 'native/Sources/LocalAIBench/Resources/workload_core.py', '.github/workflows/portal-tests.yml']
 permissions:
   contents: read
 jobs:
@@ -18,5 +18,8 @@ jobs:
           python-version: '3.12'
       - run: npx --yes pnpm@11.25.0 install --frozen-lockfile
       - run: node --experimental-strip-types --test tests/*.test.mjs
-      - run: npx tsc --noEmit
+      - name: Typecheck the public checkout without private hosting metadata
+        run: |
+          test ! -e .openai/hosting.json
+          npx tsc --noEmit
       - run: npx eslint components/comparison-data.tsx components/workload-fit-view.tsx lib/workload-fit.ts lib/workload-comparisons.ts
