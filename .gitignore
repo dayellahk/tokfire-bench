@@ -63,3 +63,10 @@ __pycache__/
 /android/assets/
 *.keystore
 *.jks
+
+# Internal reference datasets and hosting metadata stay private.
+/data/
+/research/
+/.openai/
+/deploy/seed.mjs
+/scripts/import-omlx.py
