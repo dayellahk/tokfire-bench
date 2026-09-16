@@ -258,5 +258,6 @@
   "Comparison group:": "比较组别：",
   "· Unverified external runtime identity": "· 外部 runtime 身份未验证",
   "Aggregate tok/s": "总吞吐 tok/s",
-  "Small-sample tails are descriptive. Decode shows the median of available runtime metrics; aggregate throughput is not per-job speed.": "小样本尾部延迟仅作描述。Decode 显示 runtime 已提供数据的中位数；总吞吐量不等于每个 job 的速度。"
+  "Small-sample tails are descriptive. Decode shows the median of available runtime metrics; aggregate throughput is not per-job speed.": "小样本尾部延迟仅作描述。Decode 显示 runtime 已提供数据的中位数；总吞吐量不等于每个 job 的速度。",
+  "Snapshot:": "快照日期："
 }

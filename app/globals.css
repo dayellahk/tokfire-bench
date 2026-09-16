@@ -12,3 +12,5 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,su
 .language-switcher a:focus-visible{outline:2px solid #fff;outline-offset:2px}
 html[lang^=zh] h1{line-height:1.22;letter-spacing:-.035em}html[lang^=zh] .kicker,html[lang^=zh] .eyebrow{letter-spacing:.08em}
 body{padding-bottom:70px}
+
+.comparison-panel{padding:24px;margin-bottom:24px}.comparison-panel .panel-head{padding:0 0 8px}.comparison-panel>p{margin:12px 0;line-height:1.65;color:var(--muted)}.comparison-panel .actions{margin:20px 0;align-items:center}.comparison-panel label{display:flex;align-items:center;gap:12px;font-size:13px}.comparison-panel select,.comparison-panel input{background:#211914;color:var(--ink);border:1px solid #55483f;border-radius:6px;padding:10px 12px;min-height:42px}.comparison-panel input{flex:1;min-width:180px}.comparison-panel .table-scroll{margin:18px 0;border:1px solid var(--line);border-radius:6px}.comparison-panel .text-link{display:inline-block;margin-top:8px}@media(max-width:650px){.comparison-panel{padding:16px}.comparison-panel input{width:100%}}
