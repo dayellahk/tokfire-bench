@@ -1,4 +1,6 @@
 'use client';
+import {localizeTree,localizedPath} from '@/lib/i18n';
+import {useLocale} from '@/components/language-switcher';
 
 import { useEffect, useState } from 'react';
 import { Activity, Flame, ArrowRight, Check, Cpu, Database, Download, FileUp, Gauge, LockKeyhole, ShieldCheck, Trash2, Trophy } from 'lucide-react';
@@ -19,7 +21,7 @@ async function api<T>(path:string, options?:RequestInit) {
   return result;
 }
 
-export default function Home() {
+export default function Home() {const locale=useLocale();
   const [tab,setTab]=useState<Tab>('benchmark');
   const [report,setReport]=useState<BenchmarkReport|null>(null);
   const [collect,setCollect]=useState(false),[publish,setPublish]=useState(false);
@@ -34,6 +36,8 @@ export default function Home() {
   const cohorts=Array.from(new Map(rankings.map(r=>[r.cohort,r])).values());
   const selectedCohort=cohorts.some(r=>r.cohort===cohort)?cohort:cohorts[0]?.cohort;
   const visible=rankings.filter(r=>r.cohort===selectedCohort).sort((a,b)=>b.decodeTps-a.decodeTps);
+
+  useEffect(()=>{const requested=new URLSearchParams(location.search).get('tab');if(requested==='rankings'||requested==='privacy'){setLoading(true);setTab(requested);}},[]);
 
   useEffect(()=>{
     if(tab==='benchmark') return;
@@ -75,10 +79,10 @@ export default function Home() {
     } catch(e) {setError(e instanceof Error?e.message:'Update failed');} finally {setBusy(false);}
   }
 
-  return <main className="app-shell">
+  return localizeTree(<main className="app-shell">
     <aside className="sidebar">
       <div className="brand"><div className="brand-mark"><Flame size={21}/></div><div><b>TokFire</b><span>TOKFIRE BENCH</span></div></div>
-      <nav aria-label="Primary navigation">{([['benchmark','Benchmark',Gauge],['rankings','Comparisons',Trophy],['privacy','My data',ShieldCheck]] as const).map(([id,label,Icon])=><button key={id} aria-label={label} aria-current={tab===id?'page':undefined} className={tab===id?'active':''} onClick={()=>{if(id===tab)return;setTab(id);setLoading(id!=='benchmark');setError('');setMessage('');}}><Icon/>{label}</button>)}</nav>
+      <nav aria-label="Primary navigation">{([['benchmark','Benchmark',Gauge],['rankings','Comparisons',Trophy],['privacy','My data',ShieldCheck]] as const).map(([id,label,Icon])=><button key={id} aria-label={label} aria-current={tab===id?'page':undefined} className={tab===id?'active':''} onClick={()=>{if(id===tab)return;setTab(id);history.replaceState(null,'',location.pathname+(id==='benchmark'?'':'?tab='+id));setLoading(id!=='benchmark');setError('');setMessage('');}}><Icon/>{label}</button>)}</nav>
       <div className="device-mini"><LockKeyhole size={14}/> LOCAL FIRST<div>Developer alpha</div><small>Measured on your device</small></div>
       <div className="side-foot"><span>TokFire Labs</span><b>tokfires.com</b></div>
     </aside>
@@ -134,5 +138,5 @@ export default function Home() {
       </section>}
       <footer className="brand-footer"><b>TokFire Bench</b><span>Built by TokFire Labs · tokfires.com</span><span>Local models. Measured performance.</span></footer>
     </section>
-  </main>;
+  </main>,locale);
 }
