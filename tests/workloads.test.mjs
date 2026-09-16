@@ -43,7 +43,7 @@ test('public comparison is an allowlisted summary and remote hardware stays iden
  const report=fixture(false,true);const summary=await publicWorkloadSummary(report);
  assert.equal(summary.location,'remote-server');assert.equal(summary.rows[0].attempts,3);
  assert.equal(summary.rows[0].decodeTps,null);
- assert.deepEqual(Object.keys(summary).sort(),['runId','measuredAt','platform','chip','memoryBytes','model','modelHash','runtime','runtimeHash','workload','location','cohort','rows'].sort());
+ assert.deepEqual(Object.keys(summary).sort(),['runId','measuredAt','platform','chip','memoryBytes','model','modelHash','runtime','runtimeHash','workload','location','cohort','contextTokens','repeats','gpuNames','fit','rows'].sort());
  assert.equal(await publicWorkloadSummary({...report,ownerEmail:'private@example.invalid'}),null);
 });
 test('unverified external model IDs cannot merge into exact-build comparison groups',async()=>{

@@ -1,0 +1,22 @@
+name: Portal report and fit tests
+on:
+  workflow_dispatch:
+  push:
+    paths: ['app/**', 'components/**', 'lib/**', 'tests/**', 'native/Sources/LocalAIBench/Resources/workload_core.py', '.github/workflows/portal-tests.yml']
+permissions:
+  contents: read
+jobs:
+  reports:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npx --yes pnpm@11.25.0 install --frozen-lockfile
+      - run: node --experimental-strip-types --test tests/*.test.mjs
+      - run: npx tsc --noEmit
+      - run: npx eslint components/comparison-data.tsx components/workload-fit-view.tsx lib/workload-fit.ts lib/workload-comparisons.ts

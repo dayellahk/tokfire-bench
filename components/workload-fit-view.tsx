@@ -1,0 +1,27 @@
+'use client';
+import {useLocale} from './language-switcher';
+import {localizeTree,translate} from '@/lib/i18n';
+import {FIT_LABELS,FIT_REASONS,type FitGrade} from '@/lib/workload-fit';
+import type {WorkloadComparison} from '@/lib/workload-comparisons';
+export const WORKLOAD_NAMES:Record<string,string>={'short-chat':'Short chat',business:'Business writing','long-summary':'Long summary','agent-tools':'Agent tool workflow'};
+export function FitBadge({grade}:{grade:FitGrade}) {
+ const locale=useLocale();
+ return <span className={`fit-badge fit-${grade.toLowerCase()}`}><b>{grade}</b><span>{translate(FIT_LABELS[grade],locale)}</span></span>;
+}
+const speed=(n:number|null)=>n===null?'Unavailable':n.toFixed(1)+' tok/s';
+const seconds=(n:number|null)=>n===null?'Unavailable':(n/1000).toFixed(2)+' s';
+export function WorkloadFitView({run,local=false}:{run:WorkloadComparison;local?:boolean}) {
+ const locale=useLocale();const agent=run.workload==='agent-tools';
+ return localizeTree(<article className="fit-report">
+  <div className="fit-report-head"><div><span className="fit-eyebrow">{local?'LOCAL PREVIEW · NOT UPLOADED':'COMMUNITY REPORT · UNVERIFIED'}</span><h3 data-no-translate>{run.model}</h3><p><span data-no-translate>{run.chip} · {(run.memoryBytes/2**30).toFixed(1)} GiB · {run.platform}</span></p></div><FitBadge grade={run.fit.grade}/></div>
+  {run.location==='remote-server'&&<p className="fit-warning">Remote server test: this hardware is the request client, not the inference host.</p>}
+  <div className="fit-context"><span>{WORKLOAD_NAMES[run.workload]}</span><span data-no-translate>{run.runtime}</span><span>Context <b>{run.contextTokens.toLocaleString('en')}</b></span><span>Repeats <b>{run.repeats}</b></span></div>
+  <div className="fit-capacity"><div><span>Highest smooth level tested</span><strong>{run.fit.maxSmoothJobs??'—'} <small>concurrent jobs</small></strong></div><p>{agent?'Agent grades cover the fixed lookup → sum → answer task only. They do not certify general autonomous agents.':'Chat/text results do not establish tool-task capability. Run the agent workflow to assess agent use.'}</p></div>
+  <div className="table-scroll" tabIndex={0} aria-label="Measured workload levels"><table className="fit-level-table"><thead><tr><th>Tested jobs</th><th>Hardware × model fit</th><th>Completed</th><th>Slowest decode</th><th>Longest visible wait</th><th>P95 task time</th><th>Aggregate tok/s</th></tr></thead><tbody>{run.fit.levels.map(level=>{
+   const row=run.rows.find(r=>r.jobs===level.jobs);
+   return <tr key={level.jobs}><td className="fit-job-count">{level.jobs}</td><td><FitBadge grade={level.grade}/></td><td>{level.complete} / {level.attempts}<small>{Math.round(level.complete/level.attempts*100)}%</small></td><td>{speed(level.minDecodeTps)}</td><td>{seconds(level.maxFirstVisibleMs)}</td><td>{seconds(row?.p95Ms??null)}</td><td>{row?.aggregateTps?.toFixed(1)??'—'}</td></tr>;
+  })}</tbody></table></div>
+  <details className="fit-details"><summary>Why this grade? View evidence</summary>{run.fit.levels.map(level=><div key={level.jobs} className="fit-evidence"><h4>{level.jobs} <span>concurrent jobs</span> · {level.grade}</h4><ul>{level.reasons.map(reason=><li key={reason}>{FIT_REASONS[reason]}</li>)}</ul><p>Partial <b>{level.partial}</b> · Failed <b>{level.failed}</b> · Tool errors <b>{level.toolErrors}</b></p><p>Decode coverage <b>{level.decodeCoverage}/{level.requests}</b> · Visible timing coverage <b>{level.visibleCoverage}/{level.requests}</b></p><p>100 tok/s target, every request <b>{level.meets100Tps===null?'Unknown':level.meets100Tps?'Met':'Not met'}</b></p></div>)}<p>Small samples describe this run, not a sustained-service guarantee. Untested job counts remain unknown.</p><p>Comparison group: <code>{run.cohort.slice(0,12)}</code> · <span data-no-translate>{run.measuredAt}</span></p><p>{run.modelHash?'Model file hash recorded':'Unverified external runtime identity'} · <span data-no-translate>{run.gpuNames.join(', ')}</span></p></details>
+ </article>,locale);
+}
+export function FitGuide(){const locale=useLocale();return localizeTree(<details className="fit-guide" id="fit-guide"><summary>How hardware × model grades work</summary><p>TokFire fit v1 uses the same interaction guideline as app 0.7: every task completes, every request decodes at least 30 tok/s, and every request produces visible output within 3 seconds. Missing runtime metrics remain unknown.</p><p>A / B additionally require the shipped agent tool workflow to complete without tool errors. C applies to the tested chat/text workload. D means the tested level missed the guideline. U means there is insufficient evidence to assess this hardware/model combination.</p><p>Grades describe this workload, context, runtime and tested job count. They are not a universal hardware score, a model quality score or a memory-fit prediction. A chat result cannot prove that agent work is impossible or that only one job will work.</p><p>External oMLX rows supply reference speed or quality scores. Without per-job latency, completion and tool results, they cannot receive an A / B / C grade. A fast generation signal is not an agent-readiness claim.</p><p>The optional 100–200 tok/s range is a user target, not a promised speed for any cloud subscription. Total throughput across jobs is never substituted for each job’s speed.</p></details>,locale);}
