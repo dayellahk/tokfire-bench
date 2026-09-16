@@ -3,8 +3,10 @@ import WebKit
 
 let siteOrigin = "https://tokfires.com"
 @MainActor final class UploadStore: NSObject, ObservableObject, WKNavigationDelegate {
-    @Published var enabled = UserDefaults.standard.object(forKey: "autoUpload") as? Bool ?? true {
-        didSet { UserDefaults.standard.set(enabled, forKey: "autoUpload"); if !enabled { status = "uploadPaused" } }
+    let uploadSuppressed: Bool
+    private let preferences: UserDefaults
+    @Published var enabled: Bool {
+        didSet { if !uploadSuppressed { preferences.set(enabled, forKey: "autoUpload") }; if !enabled { status = "uploadPaused" } }
     }
     @Published var publish = false
     @Published var status = "connectAccount"
@@ -15,7 +17,10 @@ let siteOrigin = "https://tokfires.com"
     private let outbox: URL
     private let origin: String
     private var uploading = false
-    init(origin: String = siteOrigin, queueDirectory: URL? = nil) {
+    init(origin: String = siteOrigin, queueDirectory: URL? = nil, preferences: UserDefaults = .standard, arguments: [String] = CommandLine.arguments) {
+        self.preferences = preferences
+        self.uploadSuppressed = arguments.contains("--no-upload")
+        self.enabled = !arguments.contains("--no-upload") && (preferences.object(forKey: "autoUpload") as? Bool ?? true)
         self.origin = origin; self.outbox = queueDirectory ?? supportFolder.appendingPathComponent("Outbox")
         super.init(); webView.navigationDelegate = self
         try? FileManager.default.createDirectory(at: outbox, withIntermediateDirectories: true)
@@ -31,7 +36,7 @@ let siteOrigin = "https://tokfires.com"
         }
     }
     func enqueue(_ url: URL, consent: Bool, publication: Bool) {
-        guard consent, enabled else { status = "localOnly"; return }
+        guard !uploadSuppressed, consent, enabled else { status = "localOnly"; return }
         do {
             let data = try Data(contentsOf: url)
             guard let report = try JSONSerialization.jsonObject(with: data) as? [String: Any], let id = report["runId"] as? String, UUID(uuidString: id) != nil else { return }
@@ -43,7 +48,7 @@ let siteOrigin = "https://tokfires.com"
     }
     func clearQueue() { guard !uploading else { return }; for file in files() { try? FileManager.default.removeItem(at: file) }; pending = files().count; status = "localOnly" }
     func retry() {
-        guard enabled, !uploading else { return }
+        guard !uploadSuppressed, enabled, !uploading else { return }
         guard connected, webView.url?.absoluteString == origin + "/native-connect" else { status = "connectAccount"; return }
         guard let file = files().first, let bytes = try? Data(contentsOf: file), let payload = String(data: bytes, encoding: .utf8) else { return }
         uploading = true; status = "uploading"

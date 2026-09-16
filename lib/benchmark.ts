@@ -3,6 +3,8 @@ import { z } from 'zod';
 export const SPEC_VERSION = 'local-ai-text-v1';
 export const CONSENT_VERSION = '2026-09-15-v1';
 export const MAX_REPORT_BYTES = 200_000;
+// Allow floating-point rounding at the existing one-token runtime boundary.
+export const TIMING_TOKEN_TOLERANCE = 1 + 1e-9;
 const positive = z.number().finite().positive();
 const hash = z.string().regex(/^[a-f0-9]{64}$/);
 const sample = z.object({
@@ -11,8 +13,8 @@ const sample = z.object({
   prefillTps: positive.max(10_000_000), decodeTps: positive.max(1_000_000),
   prefillMs: positive.max(600_000), decodeMs: positive.max(600_000), elapsedMs: positive.max(1_200_000),
 }).strict().superRefine((s, ctx) => {
-  if (s.ttftMs > s.elapsedMs || Math.abs(s.prefillTps * s.prefillMs / 1000 - s.inputTokens) > 1 ||
-      Math.abs(s.decodeTps * s.decodeMs / 1000 - s.outputTokens) > 1) {
+  if (s.ttftMs > s.elapsedMs || Math.abs(s.prefillTps * s.prefillMs / 1000 - s.inputTokens) > TIMING_TOKEN_TOLERANCE ||
+      Math.abs(s.decodeTps * s.decodeMs / 1000 - s.outputTokens) > TIMING_TOKEN_TOLERANCE) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Inconsistent timing or token counts' });
   }
 });

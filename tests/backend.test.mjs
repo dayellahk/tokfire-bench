@@ -88,3 +88,13 @@ test('reverse proxy writes use the configured public origin, not an internal lis
  assert.equal(authorizeWrite(new Request(internal,{headers:{origin:'https://tokfires.com'}}),'owner','https://tokfires.com'),'owner');
  assert.throws(()=>authorizeWrite(new Request(internal,{headers:{origin:'https://attacker.invalid','x-forwarded-host':'attacker.invalid'}}),'owner','https://tokfires.com'),{status:403});
 });
+
+test('one-token runtime timing boundary tolerates machine rounding, not extra missing tokens',()=>{
+  const r=report();const s=r.models[0].samples[0];
+  s.decodeMs=2600.445;s.decodeTps=48.83779506968999;
+  assert.equal(reportSchema.safeParse(r).success,true);
+  s.decodeTps=(s.outputTokens-1.00001)*1000/s.decodeMs;
+  assert.equal(reportSchema.safeParse(r).success,false);
+  s.decodeTps=(s.outputTokens-2)*1000/s.decodeMs;
+  assert.equal(reportSchema.safeParse(r).success,false);
+});

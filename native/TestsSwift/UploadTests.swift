@@ -2,6 +2,27 @@ import XCTest
 import WebKit
 @testable import LocalAIBench
 final class UploadTests: XCTestCase {
+    @MainActor func testNoUploadFlagDoesNotChangeSavedPreference() throws {
+        let suite = "TokFire.UploadTests." + UUID().uuidString
+        let prefs = try XCTUnwrap(UserDefaults(suiteName: suite))
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { prefs.removePersistentDomain(forName: suite); try? FileManager.default.removeItem(at: folder) }
+        prefs.set(true, forKey: "autoUpload")
+        let isolated = UploadStore(queueDirectory: folder, preferences: prefs, arguments: ["--no-upload"])
+        XCTAssertFalse(isolated.enabled)
+        XCTAssertTrue(isolated.uploadSuppressed)
+        isolated.enabled = false
+        XCTAssertTrue(prefs.bool(forKey: "autoUpload"))
+        isolated.enabled = true
+        isolated.enqueue(folder.appendingPathComponent("missing.json"), consent: true, publication: false)
+        XCTAssertEqual(isolated.pending, 0)
+        XCTAssertEqual(isolated.status, "localOnly")
+        let normal = UploadStore(queueDirectory: folder, preferences: prefs, arguments: [])
+        XCTAssertTrue(normal.enabled)
+        normal.enabled = false
+        XCTAssertFalse(prefs.bool(forKey: "autoUpload"))
+    }
+
     @MainActor func testLocalWebKitSignInAndUpload() async throws {
         guard ProcessInfo.processInfo.environment["LOCALAI_TEST_SITE"] == "1" else { throw XCTSkip("Opt-in local website integration") }
         let folder=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)

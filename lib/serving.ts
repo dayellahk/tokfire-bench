@@ -1,6 +1,6 @@
 import {workloadSchema} from './workloads.ts';
 import { z } from 'zod';
-import { CONSENT_VERSION, reportSchema } from './benchmark.ts';
+import { CONSENT_VERSION, reportSchema, TIMING_TOKEN_TOLERANCE } from './benchmark.ts';
 const positive=z.number().finite().positive();
 const hash=z.string().regex(/^[a-f0-9]{64}$/);
 const sample=z.object({inputTokens:positive.int().max(100000),outputTokens:z.number().int().min(16).max(128),ttftMs:positive.max(180000),prefillTps:positive.max(10000000),decodeTps:positive.max(1000000),endToEndTps:positive.max(1000000),elapsedMs:positive.max(180000),cachedTokens:z.literal(0),concurrency:z.number().int().min(1).max(3),repeat:z.number().int().min(1).max(3),user:z.number().int().min(1).max(3),finishReason:z.enum(['length','stop'])}).strict().superRefine((s,c)=>{if(s.user>s.concurrency||s.ttftMs>s.elapsedMs||Math.abs(s.endToEndTps*s.elapsedMs/1000-s.outputTokens)>.01)c.addIssue({code:'custom',message:'Invalid request timing'});});
@@ -18,7 +18,7 @@ export const servingSchema=z.object({specVersion:z.literal('local-ai-omlx-v1'),r
 });
 const standard=reportSchema.innerType();
 const rawModel=standard.shape.models.element.innerType();
-const trialSample=rawModel.shape.samples.element.innerType().extend({inputTokens:z.literal(512),outputTokens:z.literal(32),repeat:z.literal(1)}).superRefine((s,c)=>{if(s.ttftMs>s.elapsedMs||Math.abs(s.prefillTps*s.prefillMs/1000-s.inputTokens)>1||Math.abs(s.decodeTps*s.decodeMs/1000-s.outputTokens)>1)c.addIssue({code:'custom',message:'Invalid trial timings'});});
+const trialSample=rawModel.shape.samples.element.innerType().extend({inputTokens:z.literal(512),outputTokens:z.literal(32),repeat:z.literal(1)}).superRefine((s,c)=>{if(s.ttftMs>s.elapsedMs||Math.abs(s.prefillTps*s.prefillMs/1000-s.inputTokens)>TIMING_TOKEN_TOLERANCE||Math.abs(s.decodeTps*s.decodeMs/1000-s.outputTokens)>TIMING_TOKEN_TOLERANCE)c.addIssue({code:'custom',message:'Invalid trial timings'});});
 export const trialSchema=standard.extend({specVersion:z.literal('local-ai-trial-v1'),runnerVersion:z.literal('0.2.1'),models:z.array(rawModel.extend({samples:z.array(trialSample).length(1)})).length(1)}).superRefine((r,c)=>{if(r.runtime.threads!==r.hardware.cpuCores)c.addIssue({code:'custom',message:'Invalid thread count'});});
 // Selected simultaneous jobs are a separate profile from the old 1→2→3 sweep.
 const jobSample=sample.innerType().omit({user:true}).extend({

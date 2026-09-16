@@ -89,7 +89,6 @@ struct WorkspaceView: View {
             guard !initialized else { return }; initialized = true
             if let i = CommandLine.arguments.firstIndex(of: "--language"), CommandLine.arguments.indices.contains(i+1) { lang.code = CommandLine.arguments[i+1] }
             if CommandLine.arguments.contains("--offline") || !catalog.online { catalog.setOnline(false) } else { catalog.refresh() }
-            if CommandLine.arguments.contains("--no-upload") { bench.uploads.enabled = false }
             if let i = CommandLine.arguments.firstIndex(of: "--workload"), CommandLine.arguments.indices.contains(i+1) { bench.workload = CommandLine.arguments[i+1] }
             bench.sweep = CommandLine.arguments.contains("--sweep")
             if CommandLine.arguments.contains("--legacy-jobs") { bench.workloadMode = false }
@@ -267,7 +266,7 @@ struct UploadPanel: View {
     @ObservedObject private var language = LanguageStore.shared
     @ObservedObject var store: UploadStore
     var body: some View { VStack(alignment: .leading, spacing: 10) {
-        Toggle(L("autoUpload"), isOn: $store.enabled).toggleStyle(.switch)
+        Toggle(L("autoUpload"), isOn: $store.enabled).toggleStyle(.switch).disabled(store.uploadSuppressed)
         if store.enabled { Toggle(L("publicShare"), isOn: $store.publish).font(.caption) }
         Text(L("uploadHelp")).font(.caption).foregroundColor(muted)
         UploadStatus(store: store)
