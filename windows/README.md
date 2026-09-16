@@ -31,3 +31,8 @@ Install .NET SDK 10, then from the source root:
     dotnet publish windows/TokFire.Bench.csproj -c Release -r win-x64 --self-contained true -o windows/publish/win-x64
 
 No administrator privileges are required by the application. Models and inference runtimes are not bundled.
+
+
+Guest upload update: account sign-in is no longer required. The app automatically
+prepares a WebView2 guest session before upload. WebView2 is still required for
+this connection and the report manager. Keep its application data to retain access.

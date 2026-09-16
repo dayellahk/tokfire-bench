@@ -38,3 +38,9 @@ new 0.7 workload measurements.
 passes. A focused Swift regression test verifies launch-only suppression, unchanged
 saved preferences and refusal to queue while suppression is active. Mac build 9
 retains app version 0.7.0 and contains the upload-setting fix.
+
+## Follow-up: guest uploads
+
+The login requirement above was superseded by guest uploads at the user's request.
+All 12 reports are now stored privately under the Ego guest session and the outbox
+is empty. See GUEST-UPLOADS.md for the current flow and validation.

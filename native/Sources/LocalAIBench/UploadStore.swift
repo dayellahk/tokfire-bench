@@ -9,7 +9,7 @@ let siteOrigin = "https://tokfires.com"
         didSet { if !uploadSuppressed { preferences.set(enabled, forKey: "autoUpload") }; if !enabled { status = "uploadPaused" } }
     }
     @Published var publish = false
-    @Published var status = "connectAccount"
+    @Published var status = "accountConnected"
     @Published var connected = false
     @Published var pending = 0
     @Published var showAccount = false
@@ -25,6 +25,7 @@ let siteOrigin = "https://tokfires.com"
         super.init(); webView.navigationDelegate = self
         try? FileManager.default.createDirectory(at: outbox, withIntermediateDirectories: true)
         pending = files().count
+        if pending > 0 && enabled && !uploadSuppressed { load() }
     }
     private func files() -> [URL] { ((try? FileManager.default.contentsOfDirectory(at: outbox, includingPropertiesForKeys: nil)) ?? []).filter { $0.pathExtension == "json" }.sorted { $0.lastPathComponent < $1.lastPathComponent } }
     func connect() { showAccount = true; load() }

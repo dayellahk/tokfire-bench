@@ -4,7 +4,7 @@ import path from 'node:path';
 const origin='https://tokfires.com';
 const output=path.resolve('dist/cloudflare-static');
 await rm(output,{recursive:true,force:true});await mkdir(output,{recursive:true});
-const variants=[{prefix:'',notice:'Static site · Sign in, upload reports and view live comparisons on the main portal.',open:'Open the live portal',account:'Sign in / Register',nav:['Benchmark','Comparisons','My data']},{prefix:'/zh-Hant',notice:'靜態網站 · 登入、上傳報告及即時比較請前往主站。',open:'開啟完整網站',account:'登入／註冊',nav:['效能測試','效能比較','我的資料']},{prefix:'/zh-Hans',notice:'静态网站 · 登录、上传报告及实时比较请前往主站。',open:'打开完整网站',account:'登录／注册',nav:['效能测试','效能比较','我的资料']}];
+const variants=[{prefix:'',notice:'Static site · Upload as a guest and view live comparisons on the main portal.',open:'Open the live portal',account:'Guest · My data',nav:['Benchmark','Comparisons','My data']},{prefix:'/zh-Hant',notice:'靜態網站 · 訪客上傳報告及即時比較請前往主站。',open:'開啟完整網站',account:'訪客 · 我的資料',nav:['效能測試','效能比較','我的資料']},{prefix:'/zh-Hans',notice:'静态网站 · 访客上传报告及实时比较请前往主站。',open:'打开完整网站',account:'访客 · 我的数据',nav:['效能测试','效能比较','我的资料']}];
 const assets=new Set(['/favicon.svg']);
 for(const variant of variants){for(const suffix of ['','/methodology']){
  const route=variant.prefix+suffix||'/';const response=await fetch(origin+route);if(!response.ok)throw Error(`Source ${route}: ${response.status}`);
@@ -12,7 +12,7 @@ for(const variant of variants){for(const suffix of ['','/methodology']){
  html=html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'').replace(/<link\b[^>]*(?:as="script"|rel="modulepreload")[^>]*>/gi,'');
  const live=origin+(variant.prefix||'/');
  html=html.replace(/<button([^>]*)>([\s\S]*?)<\/button>/g,(_,attrs,content)=>{const label=attrs.match(/aria-label="([^"]+)"/)?.[1];const index=variant.nav.indexOf(label);if(index<0)throw Error('Unexpected interactive button in static page');const href=index===0?variant.prefix||'/':live+'?tab='+(index===1?'rankings':'privacy');return `<a${attrs} href="${href}">${content}</a>`;});
- html=html.replace(/<span>(?:Account…|帳戶…|帐户…)<\/span>/g,`<a class="text-link" href="${origin+variant.prefix}/signin">${variant.account}</a>`);
+ html=html.replace(/<span>(?:Account…|帳戶…|帐户…)<\/span>/g,`<a class="text-link" href="${origin+(variant.prefix||'/')}?tab=privacy">${variant.account}</a>`);
  html=html.replace(/<aside class="panel run-panel">[\s\S]*?<\/aside>/,`<aside class="panel run-panel"><span class="panel-index">TOKFIRE BENCH</span><h2>${variant.open}</h2><p>${variant.notice}</p><a class="download-link" href="${live}">${variant.open} →</a></aside>`);
  html=html.replace(/href="(\/[^"#]*)"/g,(all,href)=>{const u=new URL(href,origin);const plain=u.pathname.replace(/^\/(zh-Hant|zh-Hans)(?=\/|$)/,'')||'/';if(['/signin','/native-connect','/signin-with-chatgpt'].includes(plain)||/\.(?:zip|dmg|apk|gz|sha256)$/.test(plain))return `href="${origin+href}"`;return all;});
  html=html.replace(/<body([^>]*)>/,`<body$1><div style="position:relative;z-index:60;padding:10px 20px;background:#35241b;color:#ffca9e;text-align:center;font-size:13px">${variant.notice} <a href="${live}" style="text-decoration:underline">${variant.open} →</a></div>`);

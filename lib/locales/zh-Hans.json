@@ -368,5 +368,21 @@
   "· Visible timing coverage": "· 可见输出延迟覆盖",
   "concurrent job": "个并发 job",
   "Tests run in the desktop app. Public comparisons show TokFire reports shared with permission. TokFire Bench has been tested on an M2 Max; the developer DMG is ad-hoc signed and not notarized. Windows x64 is an unsigned preview; native Windows and GPU validation are still pending.": "测试在桌面应用程序中执行。公开比较只显示经同意分享的 TokFire 报告。TokFire Bench 已在 M2 Max 测试；开发版 DMG 使用临时签署，尚未经 Apple 公证。Windows x64 为未签署预览版，仍待 Windows 实机及 GPU 验证。",
-  "No public legacy benchmark reports yet. Workload reports appear above.": "尚未有公开的旧版基准测试报告。工作负载报告显示于上方。"
+  "No public legacy benchmark reports yet. Workload reports appear above.": "尚未有公开的旧版基准测试报告。工作负载报告显示于上方。",
+  "TokFire guest uploads": "TokFire 访客上传",
+  "Ready — no sign-in required": "已准备好，无需登录",
+  "Completed tests upload automatically when upload is enabled. Public sharing is a separate option and remains off by default.": "开启上传后，测试完成会自动上传。公开分享为独立选项，默认关闭。",
+  "A private guest credential stays in this browser or app. Keep its website data to view, publish or delete your reports. Clearing that data removes your access; your local report files remain safe.": "私人访客凭证保存在此浏览器或 app。请保留网站数据，以查看、公开或删除报告。清除后会失去管理权限，本机报告文件不受影响。",
+  "Uploads include hardware, model/runtime details and measurements. Prompts, generated text and local file paths are excluded.": "上传包括硬件、模型及运行环境信息与测量结果，不含提示词、生成文字或本机路径。",
+  "Manage reports on this device →": "管理此设备的报告 →",
+  "Guest · My data": "访客 · 我的数据",
+  "Benchmark GGUF or MLX models, choose 1–3 concurrent jobs calling one model, and upload results without signing in.": "测试 GGUF 或 MLX 模型，选择 1–3 个并行 jobs 调用同一模型，无需登录即可上传结果。",
+  "Run and upload as a guest": "以访客身份测试及上传",
+  "Guest or account ownership and consent timestamps": "访客或账户所有权及同意时间",
+  "No saved reports in this browser or account.": "此浏览器或账户暂无已保存报告。",
+  "Optional account sign-in": "可选：登录账户",
+  "No sign-in required. Guest reports belong to this browser or app. Keep its website data to manage them; another browser has a separate guest identity.": "无需登录。访客报告属于此浏览器或 app，请保留其网站数据以管理报告；其他浏览器会使用另一个访客身份。",
+  "Runs / contributors": "报告／提交身份",
+  "Uploads contain the hardware fields above, OS version, runtime/model hashes, run ID, timestamps and timing samples. The server uses a private guest credential or your signed-in account for ownership and deletion. Your identity is not displayed in comparisons. This is pseudonymous, not fully anonymous.": "上传包含上述硬件、操作系统、模型及运行环境指纹、测试 ID、时间及测量数据。私人访客凭证或账户用于管理及删除报告，公开比较不显示身份。这并非完全匿名。",
+  "The benchmark runner makes loopback requests only and saves reports locally. The optional MiniCPM launcher downloads the official model from Hugging Face and verifies its checksum. Browser import does not upload. Saving requires collection consent but no sign-in; publication is a separate opt-in. A private guest credential or optional account identifies the report owner. Published comparisons omit identity but include hardware and hashes. Published comparisons are visible to site visitors. Private reports require the guest credential or account that uploaded them. Clearing guest website data removes access.": "报告会先保存在本机。浏览器导入不会上传；保存需要收集同意，无需登录，公开分享另行选择。访客凭证或账户用于管理报告，公开结果不含身份。清除访客网站数据后会失去私人报告管理权限。"
 }

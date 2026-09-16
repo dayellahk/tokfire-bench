@@ -2,6 +2,28 @@ import XCTest
 import WebKit
 @testable import LocalAIBench
 final class UploadTests: XCTestCase {
+    @MainActor func testGuestUploadWithoutSignIn() async throws {
+        guard let origin=ProcessInfo.processInfo.environment["TOKFIRE_GUEST_TEST_ORIGIN"] else { throw XCTSkip("Opt-in guest deployment integration") }
+        let folder=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let suite="TokFire.GuestQA."+UUID().uuidString
+        let prefs=try XCTUnwrap(UserDefaults(suiteName:suite));prefs.set(true,forKey:"autoUpload")
+        defer { prefs.removePersistentDomain(forName:suite);try? FileManager.default.removeItem(at:folder) }
+        let store=UploadStore(origin:origin,queueDirectory:folder,preferences:prefs,arguments:[])
+        let root=URL(fileURLWithPath:#filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        var report=try JSONSerialization.jsonObject(with:Data(contentsOf:root.appendingPathComponent("tests/fixtures/workload-mac-real.json"))) as! [String:Any]
+        let id=UUID().uuidString;report["runId"]=id
+        let file=folder.appendingPathComponent("report.tmp");try JSONSerialization.data(withJSONObject:report).write(to:file)
+        store.enqueue(file,consent:true,publication:false)
+        for _ in 0..<300 { if store.status=="uploaded" { break };try await Task.sleep(nanoseconds:100_000_000) }
+        XCTAssertTrue(store.connected);XCTAssertEqual(store.status,"uploaded");XCTAssertEqual(store.pending,0)
+        let result=try await store.webView.callAsyncJavaScript("""
+        const r=await fetch('/api/v1/submissions');const d=await r.json();const row=d.results?.find(x=>x.runId===id);
+        if(!row)return false;const deleted=await fetch('/api/v1/submissions/'+row.id,{method:'DELETE'});
+        return row.isPublic===0 && deleted.ok;
+        """,arguments:["id":id],in:nil,contentWorld:.page)
+        XCTAssertEqual(result as? Bool,true)
+    }
+
     @MainActor func testNoUploadFlagDoesNotChangeSavedPreference() throws {
         let suite = "TokFire.UploadTests." + UUID().uuidString
         let prefs = try XCTUnwrap(UserDefaults(suiteName: suite))

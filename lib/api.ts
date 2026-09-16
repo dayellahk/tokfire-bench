@@ -1,4 +1,5 @@
-import { ApiError, authorizeWrite } from './access';
+import {guestTokenFromCookie,guestOwner} from './guest.ts';
+import { ApiError, authorizeWrite, authorizeOrigin } from './access';
 export { ApiError } from './access';
 import { getChatGPTUser } from '../app/chatgpt-auth';
 import { MAX_REPORT_BYTES } from './benchmark';
@@ -6,8 +7,12 @@ export function json(body: unknown, status = 200) {
   return Response.json(body, {status, headers: {'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff'}});
 }
 export async function writer(request: Request) {
+  authorizeOrigin(request,process.env.BETTER_AUTH_URL);
   const user = await getChatGPTUser();
-  return authorizeWrite(request, user?.userId ?? null, process.env.BETTER_AUTH_URL);
+  const token=guestTokenFromCookie(request.headers.get('cookie'));
+  const owner=user?.userId ?? (token?await guestOwner(token):null);
+  if(!owner)throw new ApiError(401,'Open TokFire to start a guest session. No sign-in is required.');
+  return authorizeWrite(request,owner,process.env.BETTER_AUTH_URL);
 }
 export async function body(request: Request, maxBytes = MAX_REPORT_BYTES) {
   if (!request.headers.get('content-type')?.startsWith('application/json')) throw new ApiError(415, 'Expected JSON');

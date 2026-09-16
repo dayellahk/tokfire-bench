@@ -84,3 +84,8 @@ Automatic desktop upload is visible before Run and enabled by default. Public sh
 The 100–200 tok/s target is user-selected, not a measured guarantee of a ChatGPT plan. Measurements do not assess answer quality. Community submissions are not hardware attestations. Public comparisons show only consented TokFire measurements. Internal external-reference snapshots are excluded from public routes and source downloads.
 
 SMTP/email verification/password recovery is not configured yet. Do not describe the previews as production-ready.
+
+
+Guest upload flow: no account is required. The live website and native upload page
+establish a device-local guest credential; publication remains opt-in. See
+[guest upload details](docs/GUEST-UPLOADS.md).

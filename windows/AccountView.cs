@@ -8,7 +8,7 @@ namespace TokFire.Bench;
 internal sealed class AccountView:UserControl {
  public const string SiteOrigin="https://tokfires.com";
  readonly WebView2 view=new(){Dock=DockStyle.Fill};
- readonly Label notice=new(){Dock=DockStyle.Top,Height=60,Text="Connect to TokFire Bench to save your reports. Local tests work without signing in.",Padding=new Padding(12)};
+ readonly Label notice=new(){Dock=DockStyle.Top,Height=60,Text="Guest uploads need no sign-in. Keep app data to manage your reports.",Padding=new Padding(12)};
  bool ready;
  public event EventHandler? SignedIn;
  public AccountView(){Controls.Add(view);Controls.Add(notice);}
@@ -22,13 +22,16 @@ internal sealed class AccountView:UserControl {
   }catch(Exception){notice.Text="Microsoft Edge WebView2 Runtime is required for account sign-in. Install it from Microsoft's WebView2 download page. Your local reports are safe.";throw;}
  }
  public async Task Upload(string payload){
-  if(!ready)throw new InvalidOperationException("Connect your TokFire account first; the report is queued.");
+  if(!ready)await Connect();
+  var connected=false;
+  for(var i=0;i<200;i++){if(await view.CoreWebView2.ExecuteScriptAsync("location.origin==='https://tokfires.com' && !!document.querySelector('[data-native-ready=\"true\"]')")=="true"){connected=true;break;}await Task.Delay(100);}
+  if(!connected)throw new InvalidOperationException("Guest upload connection unavailable. The report remains queued.");
   var cookies=await view.CoreWebView2.CookieManager.GetCookiesAsync(SiteOrigin);
   var jar=new CookieContainer();foreach(var c in cookies){var cookie=new Cookie(c.Name,c.Value,c.Path,c.Domain){Secure=c.IsSecure,HttpOnly=c.IsHttpOnly};jar.Add(cookie);}
   using var handler=new HttpClientHandler{CookieContainer=jar,AllowAutoRedirect=false};using var client=new HttpClient(handler){Timeout=TimeSpan.FromSeconds(30)};
   client.DefaultRequestHeaders.Add("Origin",SiteOrigin);
   using var response=await client.PostAsync(SiteOrigin+"/api/v2/submissions",new StringContent(payload,Encoding.UTF8,"application/json"));
-  if(response.StatusCode==HttpStatusCode.Unauthorized)throw new InvalidOperationException("Sign in on the Account tab, then retry queued uploads.");
+  if(response.StatusCode==HttpStatusCode.Unauthorized)throw new InvalidOperationException("Reopen the upload manager, then retry queued uploads.");
   if(!response.IsSuccessStatusCode)throw new InvalidOperationException($"Upload returned {(int)response.StatusCode}. The local report remains queued.");
   var result=JsonNode.Parse(await response.Content.ReadAsStringAsync());if(result?["stored"]?.GetValue<bool>()!=true)throw new InvalidOperationException("Upload was not acknowledged. The report remains queued.");
  }
