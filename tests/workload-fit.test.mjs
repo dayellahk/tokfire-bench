@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
 import {workloadSchema,WORKLOAD_PROFILES} from '../lib/workloads.ts';
-import {assessWorkloadFit,WORKLOAD_FINGERPRINTS,referenceSpeedSignal} from '../lib/workload-fit.ts';
+import {assessWorkloadFit,WORKLOAD_FINGERPRINTS} from '../lib/workload-fit.ts';
 import {publicWorkloadSummary} from '../lib/workload-comparisons.ts';
 const real=JSON.parse(readFileSync(new URL('./fixtures/workload-mac-real.json',import.meta.url)));
 function fixture(workload='agent-tools',levels=[1,2,3]){
@@ -54,10 +54,6 @@ test('no untested job levels are inferred from a single measured level',()=>{
 });
 test('real 0.7 app report is graded without changing its measurements',async()=>{
  const before=JSON.stringify(real),dto=await publicWorkloadSummary(real);assert.equal(dto.fit.grade,'C');assert.equal(dto.fit.maxSmoothJobs,1);assert.equal(JSON.stringify(real),before);
-});
-test('external speed hints never become agent-fit grades',()=>{
- assert.equal(referenceSpeedSignal('1,234.5'),'Fast generation signal');assert.equal(referenceSpeedSignal('30'),'Interactive-rate signal');assert.equal(referenceSpeedSignal('29.9'),'Slower generation signal');
- for(const value of ['','unknown','100%','-1','0'])assert.equal(referenceSpeedSignal(value),'Speed unavailable');
 });
 test('web thresholds and profile hashes match the shipped Python app assessor',()=>{
  const cases=[fixture(),fixture('short-chat',[1]),fixture('agent-tools',[3])];cases[1].models[0].samples[0].requests[0].firstVisibleMs=3001;cases[2].models[0].samples[0].requests[0].decodeTps=null;

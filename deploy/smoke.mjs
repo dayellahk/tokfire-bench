@@ -53,7 +53,7 @@ try{
  check(!(await request('/api/v1/submissions',{cookie:b.cookie})).body.results?.some(x=>x.id===workSaved.body.id),'workload remains private');
  const publicWorkloads=await request('/api/v2/leaderboard');
  check(publicWorkloads.status===200&&!publicWorkloads.body.results?.some(x=>x.runId===workload.runId),'anonymous workload comparisons exclude private uploads');
- check((await request('/api/v1/references')).body.results?.length>0,'external references load anonymously');
+ check((await request('/api/v1/references')).status===404,'external reference endpoint is unavailable');
  const forbidden=structuredClone(workData);forbidden.report.runId=randomUUID();forbidden.report.hardware.serial='forbidden';
  check((await request('/api/v2/submissions',{method:'POST',data:forbidden,cookie:a.cookie})).status===400,'workload privacy allowlist rejects identifiers');
  check((await request('/api/v1/submissions/'+workSaved.body.id,{method:'DELETE',cookie:a.cookie})).status===200,'owner can delete workload report');

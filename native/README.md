@@ -110,3 +110,9 @@ See `../docs/LEMON-SQUEEZY-SETUP.md` for the seller setup and outstanding live c
 
 Brand: TokFire. Company: TokFire Labs. Domain: tokfires.com (DNS setup pending).
 The existing Application Support/LocalAIBench path, Keychain service and module names are retained for upgrade compatibility.
+
+
+**16 September 2026 update:** External reference tables and raw-data APIs are now
+retired from the public portal. Earlier reference-display validation in this file
+is historical. Only consented TokFire results and local report previews remain
+publicly available; internal reference datasets are excluded from source downloads.

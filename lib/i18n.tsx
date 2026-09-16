@@ -17,7 +17,7 @@ export function localizeHref(href:string,locale:Locale){
  if(!href.startsWith('/')||href.startsWith('//'))return href;
  const url=new URL(href,'https://tokfires.com');
  if(url.pathname==='/signin-with-chatgpt')return localizedPath('/signin',locale)+'?return_to='+encodeURIComponent(localizedPath(url.searchParams.get('return_to')||'/',locale));
- if(['/','/signin','/native-connect','/methodology','/references'].includes(withoutLocale(url.pathname)))return localizedPath(url.pathname,locale)+url.search+url.hash;
+ if(['/','/signin','/native-connect','/methodology'].includes(withoutLocale(url.pathname)))return localizedPath(url.pathname,locale)+url.search+url.hash;
  return href;
 }
 // Translate rendered UI text during React rendering (including SSR), never mutate the DOM.

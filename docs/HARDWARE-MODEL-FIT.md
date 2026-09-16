@@ -41,14 +41,13 @@ read together. Model/runtime hashes can define exact comparison cohorts; unverif
 external runtime IDs cannot be merged across reports. Self-reported hardware and
 measurements are not independently attested. No RAM/VRAM fit prediction is made.
 
-## External oMLX references
+## Public data boundary
 
-Every external row explicitly receives U because the imported snapshot does not
-contain the full TokFire per-job and tool-task evidence. Performance rows retain
-source PP/TG and a separate generation-rate hint (≥100, ≥30, or <30 tok/s). These
-hints do not certify chat responsiveness or agent suitability. Intelligence scores
-are never converted into hardware-fit grades. Sources, snapshot coverage and links
-remain visible, with search and pagination for all imported rows.
+The public portal presents only consented TokFire measurements and local report
+previews. External reference tables, source links and raw-data downloads are
+retired. `/api/v1/references` and all reference pages return 404. The internal
+snapshot remains private and is excluded from public source archives. External
+estimates must never become measured A/B/C grades; see the recommendation design.
 
 ## Validation
 
@@ -63,5 +62,5 @@ pass locally and in [portal CI](https://github.com/dayellahk/tokfire-bench/actio
 Ego Browser checks cover a real Mac report (C / one tested job), local synthetic
 parallel-tool and single-passing-level cases (A / 3 and B / 1, with failed levels
 visible), invalid JSON rejection, no network requests during local preview,
-reference filtering/pagination, both Chinese locales and a 390 px mobile layout
+both Chinese locales and a 390 px mobile layout
 without page-level horizontal overflow. Synthetic QA reports are not published.

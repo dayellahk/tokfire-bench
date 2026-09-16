@@ -81,6 +81,6 @@ GitHub Actions workflows provide Mac compilation and Windows preview build jobs.
 
 Automatic desktop upload is visible before Run and enabled by default. Public sharing is separate and off by default. Failed/offline uploads remain queued locally. Authenticated users can retrieve, withdraw publication of, or delete their reports. Windows, Mac concurrent, oMLX, trial and standard report profiles remain distinct.
 
-The 100–200 tok/s target is user-selected, not a measured guarantee of a ChatGPT plan. Measurements do not assess answer quality. Community submissions are not hardware attestations. oMLX reference data retains source attribution and is separate from community measurements.
+The 100–200 tok/s target is user-selected, not a measured guarantee of a ChatGPT plan. Measurements do not assess answer quality. Community submissions are not hardware attestations. Public comparisons show only consented TokFire measurements. Internal external-reference snapshots are excluded from public routes and source downloads.
 
 SMTP/email verification/password recovery is not configured yet. Do not describe the previews as production-ready.

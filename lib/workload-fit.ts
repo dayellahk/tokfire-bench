@@ -68,11 +68,3 @@ export function assessWorkloadFit(report: WorkloadReport): WorkloadFit {
   const best = smooth.at(-1);
   return {version:'tokfire-fit-v1', grade: best?.grade ?? (levels.some(l => l.grade === 'D') ? 'D' : 'U'), maxSmoothJobs: best?.jobs ?? null, levels};
 }
-
-export function referenceSpeedSignal(value: string): 'Fast generation signal' | 'Interactive-rate signal' | 'Slower generation signal' | 'Speed unavailable' {
-  // Only the reported TG figure; not a hardware-fit grade or an agent capability prediction.
-  const clean=value.trim().replaceAll(',','');
-  if (!/^\d+(\.\d+)?$/.test(clean) || Number(clean) <= 0) return 'Speed unavailable';
-  const speed=Number(clean);
-  return speed >= 100 ? 'Fast generation signal' : speed >= 30 ? 'Interactive-rate signal' : 'Slower generation signal';
-}
