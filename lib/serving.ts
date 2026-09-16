@@ -1,3 +1,4 @@
+import {workloadSchema} from './workloads.ts';
 import { z } from 'zod';
 import { CONSENT_VERSION, reportSchema } from './benchmark.ts';
 const positive=z.number().finite().positive();
@@ -51,4 +52,4 @@ const windowsJobsBase=jobsBase.extend({
 });
 export const jobsSchema=jobsBase.superRefine(validateJobs);
 export const windowsJobsSchema=windowsJobsBase.superRefine(validateJobs);
-export const nativeUploadSchema=z.object({report:z.union([reportSchema,servingSchema,trialSchema,jobsSchema,windowsJobsSchema]),consent:z.object({collect:z.literal(true),publish:z.boolean(),version:z.literal(CONSENT_VERSION)}).strict()}).strict();
+export const nativeUploadSchema=z.object({report:z.union([reportSchema,servingSchema,trialSchema,jobsSchema,windowsJobsSchema,workloadSchema]),consent:z.object({collect:z.literal(true),publish:z.boolean(),version:z.literal(CONSENT_VERSION)}).strict()}).strict();

@@ -3,6 +3,15 @@ using System.Text.Json.Nodes;
 namespace TokFire.Bench;
 internal static class Reports {
  public static string Assess(JsonObject report){
+  if(report["specVersion"]?.GetValue<string>()=="tokfire-workloads-v1"){
+   var output=new StringBuilder("TokFire Bench — workload results\r\n");
+   foreach(var level in report["settings"]!["concurrencyLevels"]!.AsArray()){
+    int n=level!.GetValue<int>();var samples=report["models"]![0]!["samples"]!.AsArray().Where(s=>s!["concurrency"]!.GetValue<int>()==n).ToArray();
+    var times=samples.Select(s=>s!["elapsedMs"]!.GetValue<double>()).Order().ToArray();
+    output.AppendLine($"{n} jobs: {samples.Count(s=>s!["status"]!.GetValue<string>()=="complete")} / {samples.Length} complete; P95 {times[Math.Max(0,(int)Math.Ceiling(times.Length*.95)-1)]:F0} ms; P99 {times[Math.Max(0,(int)Math.Ceiling(times.Length*.99)-1)]:F0} ms");
+   }
+   output.AppendLine("Small-sample tails are descriptive, not an SLA. Agent completion means the local tool fixture only. Missing runtime decode metrics remain unavailable. See the companion Markdown report for full commentary.");return output.ToString();
+  }
   var rows=report["models"]![0]!["samples"]!.AsArray();var jobs=report["settings"]!["concurrentJobs"]!.GetValue<int>();
   var text=new StringBuilder($"TokFire Bench — {jobs} concurrent jobs calling one model\r\n\r\n");
   foreach(var id in Enumerable.Range(1,jobs)){

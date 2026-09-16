@@ -7,7 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyName>TokFire Bench</AssemblyName>
-    <Version>0.6.0</Version>
+    <Version>0.7.0</Version>
     <Company>TokFire Labs</Company>
     <Product>TokFire Bench</Product>
     <ApplicationManifest>app.manifest</ApplicationManifest>

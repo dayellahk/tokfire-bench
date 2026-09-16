@@ -11,9 +11,22 @@ import UniformTypeIdentifiers
     }
     let uploads = UploadStore()
     let pro = ProStore()
+    @Published var workloadMode = true
+    @Published var workload = "short-chat"
+    @Published var repeats = 3
+    @Published var sweep = false
+    @Published var endpoint = "http://127.0.0.1:11434"
+    @Published var servedModel = ""
+    @Published var workloadResult: WorkloadReport?
+    @Published var workloadCommentary = ""
+    @Published var workloadHistory: [URL] = []
+    var externalRuntime: Bool { ["Ollama", "vLLM"].contains(backend) }
+    var usesWorkloads: Bool { externalRuntime || (usesJobs && workloadMode) }
+    var workloadLevels: [Int] { sweep ? Array(Set([1,2,3,4,8,12,16,20].filter { $0 <= concurrentJobs } + [concurrentJobs])).sorted() : [concurrentJobs] }
+    var expectedSamples: Int { usesWorkloads ? workloadLevels.reduce(0,+) * repeats : usesJobs ? concurrentJobs * 3 : models.count * (trial ? 1 : 6) }
     @Published var concurrentMode = true
     @Published var concurrentJobs = 1
-    var usesJobs: Bool { backend == "oMLX" || concurrentMode }
+    var usesJobs: Bool { externalRuntime || backend == "oMLX" || concurrentMode }
     @Published var backend = "llama.cpp"
     @Published var omlx = UserDefaults.standard.string(forKey: "omlxExecutable") ?? "/opt/homebrew/bin/omlx" { didSet { UserDefaults.standard.set(omlx, forKey: "omlxExecutable") } }
     @Published var mlxModel: URL?
@@ -43,7 +56,7 @@ import UniformTypeIdentifiers
     private let device = DeviceProfile.detect()
     private var task: Process?
     private var runToken = UUID()
-    var validSelection: Bool { usesJobs ? (1...pro.limit).contains(concurrentJobs) && (backend == "oMLX" ? mlxModel != nil : models.count == 1) : trial ? models.count == 1 : (1...3).contains(models.count) }
+    var validSelection: Bool { usesJobs ? (1...pro.limit).contains(concurrentJobs) && (externalRuntime ? !servedModel.trimmingCharacters(in: .whitespaces).isEmpty : backend == "oMLX" ? mlxModel != nil : models.count == 1) : trial ? models.count == 1 : (1...3).contains(models.count) }
     var progress: Double { totalSamples == 0 ? 0 : Double(completedSamples) / Double(totalSamples) }
     init() { reloadLibrary(); reloadHistory() }
     func add(_ urls: [URL]) {
@@ -76,9 +89,19 @@ import UniformTypeIdentifiers
                   report.models.allSatisfy({ !$0.samples.isEmpty && $0.samples.allSatisfy { $0.decodeTps.isFinite && $0.decodeTps > 0 && $0.ttftMs.isFinite && $0.ttftMs > 0 } }) else { return nil }
             return HistoryItem(url: url, report: report)
         }
+        workloadHistory = urls.filter { url in
+            guard let data = try? Data(contentsOf: url), data.count <= 1_500_000,
+                  let report = try? JSONDecoder().decode(WorkloadReport.self, from: data) else { return false }
+            return report.specVersion == "tokfire-workloads-v1" && !report.models.isEmpty
+        }.sorted { $0.lastPathComponent > $1.lastPathComponent }
         history = entries.sorted { $0.report.measuredAt > $1.report.measuredAt }
     }
-    func inspect(_ item: HistoryItem) { guard !running else { return }; result = item.report; report = item.url }
+    func inspect(_ item: HistoryItem) { guard !running else { return }; workloadResult = nil; result = item.report; report = item.url }
+    func inspectWorkload(_ url: URL) {
+        guard !running, let data = try? Data(contentsOf: url), let parsed = try? JSONDecoder().decode(WorkloadReport.self, from: data) else { return }
+        result = nil; workloadResult = parsed; report = url
+        workloadCommentary = (try? String(contentsOf: url.deletingPathExtension().appendingPathExtension("md"), encoding: .utf8)) ?? ""
+    }
     func localEvidence(_ checksum: String) -> String? {
         guard let entry = history.first(where: { $0.report.specVersion == "local-ai-text-v1" && $0.report.hardware.chip == device.chip && $0.report.hardware.memoryBytes == device.memory && $0.report.runtime.binarySha256 == runtimeHash && $0.report.models.contains { $0.modelSha256 == checksum } }),
               let model = entry.report.models.first(where: { $0.modelSha256 == checksum }) else { return nil }
@@ -90,14 +113,18 @@ import UniformTypeIdentifiers
     }
     func run() {
         guard !running, validSelection else { return }
-        let scriptName = usesJobs ? "jobs_runner" : "runner"
+        let scriptName = usesWorkloads ? "workload_runner" : usesJobs ? "jobs_runner" : "runner"
         guard let script = Bundle.main.url(forResource: scriptName, withExtension: "py") ?? Bundle.module.url(forResource: scriptName, withExtension: "py") else { message = "找不到測試程式，請重新安裝 app。"; return }
-        guard FileManager.default.isExecutableFile(atPath: python), FileManager.default.isExecutableFile(atPath: backend == "oMLX" ? omlx : server) else { phase = "需要設定"; message = "未找到 Python 或 llama-server。請在設定選擇可執行檔。"; return }
+        guard FileManager.default.isExecutableFile(atPath: python), (externalRuntime || FileManager.default.isExecutableFile(atPath: backend == "oMLX" ? omlx : server)) else { phase = "需要設定"; message = "未找到 Python 或 llama-server。請在設定選擇可執行檔。"; return }
         do {
             try FileManager.default.createDirectory(at: reportsFolder, withIntermediateDirectories: true)
             let destination = reportsFolder.appendingPathComponent("benchmark-\(UUID().uuidString).json")
             let process = Process(); process.executableURL = URL(fileURLWithPath: python)
-            if usesJobs {
+            if usesWorkloads {
+                process.arguments = ["-B", "-u", script.path, "--engine", backend, "--model", externalRuntime ? servedModel.trimmingCharacters(in: .whitespaces) : backend == "oMLX" ? mlxModel!.path : models[0].path, "--jobs", String(concurrentJobs), "--workload", workload, "--repeats", String(repeats), "--output", destination.path]
+                process.arguments! += externalRuntime ? ["--endpoint", endpoint] : ["--server", backend == "oMLX" ? omlx : server]
+                if sweep { process.arguments!.append("--sweep") }
+            } else if usesJobs {
                 process.arguments = ["-B", "-u", script.path, "--engine", backend, "--server", backend == "oMLX" ? omlx : server, "--model", backend == "oMLX" ? mlxModel!.path : models[0].path, "--jobs", String(concurrentJobs), "--output", destination.path]
             } else { process.arguments = ["-B", "-u", script.path] + (trial ? ["--trial"] : []) + ["--server", server, "--output", destination.path, "--models"] + models.map(\.path) }
             // Keys travel over stdin, never argv, report JSON or runtime logs.
@@ -105,9 +132,9 @@ import UniformTypeIdentifiers
 
             let pipe = Pipe(); process.standardOutput = pipe; process.standardError = pipe
             runToken = UUID(); let token = runToken
-            running = true; stopping = false; result = nil; report = nil; latest = nil; completedSamples = 0
+            running = true; stopping = false; result = nil; workloadResult = nil; workloadCommentary = ""; report = nil; latest = nil; completedSamples = 0
             runConsent = uploads.enabled; runPublication = uploads.publish
-            totalSamples = usesJobs ? concurrentJobs * 3 : models.count * (trial ? 1 : 6); currentModel = 0; events = []; started = Date()
+            totalSamples = expectedSamples; currentModel = 0; events = []; started = Date()
             phase = "檢查環境"; message = "檢查 runtime 及硬件，首次啟動可能需要編譯 Metal shaders。"
             task = process
             do { try process.run(); if usesJobs && concurrentJobs > 3, let key = pro.keyForRun { input.fileHandleForWriting.write(Data((key + "\n").utf8)) }; try? input.fileHandleForWriting.close() } catch { running = false; task = nil; throw error }
@@ -150,6 +177,7 @@ import UniformTypeIdentifiers
             phase = ["inspect": "檢查環境", "hash": "驗證模型", "load": "載入模型", "tokenize": "準備工作負載", "warmup": "暖機中", "measure": "量度中", "cleanup": "關閉模型"] [key] ?? phase
         }
         switch event["event"] as? String {
+        case "workload-sample": completedSamples += 1
         case "sample":
             if let row = event["sample"], let data = try? JSONSerialization.data(withJSONObject: row), let sample = try? JSONDecoder().decode(Sample.self, from: data) {
                 latest = sample; completedSamples += 1
@@ -157,6 +185,11 @@ import UniformTypeIdentifiers
         case "license": if event["valid"] as? Bool == false { pro.invalidate() }
         case "error": phase = "測試失敗"
         case "complete":
+            if let data = try? Data(contentsOf: destination), let parsed = try? JSONDecoder().decode(WorkloadReport.self, from: data), parsed.specVersion == "tokfire-workloads-v1" {
+                workloadResult = parsed; report = destination; completedSamples = totalSamples; phase = "測試完成"
+                workloadCommentary = (try? String(contentsOf: destination.deletingPathExtension().appendingPathExtension("md"), encoding: .utf8)) ?? ""
+                uploads.enqueue(destination, consent: runConsent, publication: runPublication); reloadHistory(); return
+            }
             if let data = try? Data(contentsOf: destination), let parsed = try? JSONDecoder().decode(RunReport.self, from: data) {
                 report = destination; result = parsed; completedSamples = totalSamples; phase = "測試完成"
                 message = parsed.isTrial ? "快速試跑完成，結果已儲存在本機。" : "完整測試完成，結果已儲存在本機。"
@@ -197,9 +230,10 @@ import UniformTypeIdentifiers
         return lines.joined(separator: "\n") + "\n"
     }
     func exportCommentary() {
-        guard let result else { return }
+        guard result != nil || workloadResult != nil else { return }
+        let text = result.map { commentary($0) } ?? workloadCommentary
         let panel=NSSavePanel(); panel.nameFieldStringValue="local-ai-assessment.md"
-        if panel.runModal() == .OK, let url=panel.url { do { try commentary(result).write(to:url,atomically:true,encoding:.utf8) } catch { message=error.localizedDescription } }
+        if panel.runModal() == .OK, let url=panel.url { do { try text.write(to:url,atomically:true,encoding:.utf8) } catch { message=error.localizedDescription } }
     }
     func export() {
         guard let report else { return }

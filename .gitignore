@@ -58,3 +58,8 @@ __pycache__/
 
 /windows/tests/bin/
 /windows/tests/obj/
+
+/android/build/
+/android/assets/
+*.keystore
+*.jks

@@ -6,6 +6,10 @@ public sealed class BenchForm:Form {
  readonly AppSettings settings=AppSettings.Load();readonly Localization language=new();readonly ProLicense pro=new();
  readonly TabControl tabs=new(){Dock=DockStyle.Fill};readonly AccountView account=new(){Dock=DockStyle.Fill};
  readonly TextBox python=new(){Width=620},server=new(){Width=620},model=new(){Width=620};
+ readonly ComboBox engine=new(){DropDownStyle=ComboBoxStyle.DropDownList,Width=180},workload=new(){DropDownStyle=ComboBoxStyle.DropDownList,Width=260};
+ readonly NumericUpDown repeats=new(){Minimum=3,Maximum=5,Value=3,Width=80};
+ readonly CheckBox sweep=new(){AutoSize=true};
+ readonly TextBox endpoint=new(){Width=370,Text="http://127.0.0.1:11434"},servedModel=new(){Width=260};
  readonly NumericUpDown jobs=new(){Minimum=1,Maximum=3,Value=1,Width=100};
  readonly CheckBox upload=new(){AutoSize=true},publish=new(){AutoSize=true},online=new(){Checked=true,AutoSize=true};
  readonly Button run=new(),cancel=new();readonly ProgressBar progress=new(){Width=850,Height=12};
@@ -18,10 +22,18 @@ public sealed class BenchForm:Form {
  Process? process;ProcessJob? job;bool running,cancelled,uploading;double memory;int measured;string? reportPath;
  static readonly Color Dark=Color.FromArgb(24,20,18),PanelColor=Color.FromArgb(36,29,25),Orange=Color.FromArgb(255,151,77);
  public BenchForm(){
-  Text="TokFire Bench · Windows Preview 0.6.0";Size=new(1040,920);MinimumSize=new(1000,650);AutoScaleMode=AutoScaleMode.Dpi;Font=new("Segoe UI",10);StartPosition=FormStartPosition.CenterScreen;
+  Text="TokFire Bench · Windows Preview 0.7.0";Size=new(1040,920);MinimumSize=new(1000,650);AutoScaleMode=AutoScaleMode.Dpi;Font=new("Segoe UI",10);StartPosition=FormStartPosition.CenterScreen;
   var header=new Label{Text="TokFire Bench\nKnow your model. Know your PC.",Dock=DockStyle.Top,Height=94,Padding=new Padding(22,12,0,0),Font=new("Segoe UI",20,FontStyle.Bold),ForeColor=Orange};Controls.Add(tabs);Controls.Add(header);
   var bench=Page("benchmark");var explore=Page("discover");var reports=Page("history");var prefs=Page("settings");var connected=new TabPage("Account"){Tag="connectAccount"};connected.Controls.Add(account);tabs.TabPages.Add(connected);
-  bench.Controls.Add(Label("Windows x64 preview · llama.cpp / GGUF · one model, multiple concurrent jobs"));
+  bench.Controls.Add(Label("Windows x64 preview · workload benchmark · one model, concurrent jobs"));
+  engine.Items.AddRange(new object[]{"llama.cpp","Ollama","vLLM"});engine.SelectedIndex=0;
+  workload.Items.AddRange(new object[]{"short-chat","business","long-summary","agent-tools"});workload.SelectedIndex=0;
+  sweep.Tag="sweep";
+  bench.Controls.Add(Row(LabelKey("runtime"),engine,LabelKey("workload"),workload));
+  bench.Controls.Add(Row(LabelKey("localEndpoint"),endpoint,LabelKey("servedModel"),servedModel));
+  bench.Controls.Add(LabelKey("endpointHelp"));
+  bench.Controls.Add(Row(LabelKey("repeats"),repeats,sweep));
+  bench.Controls.Add(LabelKey("workloadHelp"));
   bench.Controls.Add(hardware);hardware.Text="Choose Python and llama-server in Settings, then inspect your device.";
   bench.Controls.Add(Row(LabelKey("model"),model,ButtonKey("choose",()=>Pick(model,"GGUF model|*.gguf"))));
   bench.Controls.Add(Row(LabelKey("concurrent"),jobs));bench.Controls.Add(LabelKey("jobsHelp"));bench.Controls.Add(capacity);
@@ -70,28 +82,30 @@ public sealed class BenchForm:Form {
  void SetHardware(JsonObject h){memory=h["memoryBytes"]!.GetValue<double>();hardware.Text=$"{h["chip"]} · {h["cpuCores"]} CPU cores · {memory/Math.Pow(1024,3):F1} GiB RAM\r\nGPU: {string.Join(", ",h["gpuNames"]!.AsArray().Select(x=>x!.GetValue<string>()))}";UpdateCapacity();}
  void UpdateCapacity(){try{if(memory<=0){capacity.Text="Inspect your device in Settings for a RAM estimate.";return;}var bytes=File.Exists(model.Text)?new FileInfo(model.Text).Length:0;var estimate=bytes*1.25+(2+(double)jobs.Value*.5)*Math.Pow(1024,3);capacity.Text=$"Estimated model + runtime + job memory: {estimate/Math.Pow(1024,3):F1} GiB / {memory/Math.Pow(1024,3):F1} GiB RAM. "+(estimate>memory*.8?"Choose a smaller model or fewer jobs.":"Within the initial RAM budget. GPU VRAM still needs checking.");}catch{capacity.Text="Select a model file to estimate capacity.";}}
  async Task RunBenchmark(){
-  if(running)return;Save();if(!File.Exists(settings.Server)||!File.Exists(settings.Model)){ShowError(new InvalidOperationException("Choose llama-server.exe in Settings and a local GGUF model."));return;}
+  if(running)return;Save();var external=engine.SelectedIndex!=0;if(external?string.IsNullOrWhiteSpace(servedModel.Text):(!File.Exists(settings.Server)||!File.Exists(settings.Model))){ShowError(new InvalidOperationException("Choose llama-server.exe in Settings and a local GGUF model."));return;}
   if(jobs.Value>3){try{await pro.Validate();}catch(Exception e){ShowError(e);return;}}
-  running=true;cancelled=false;run.Enabled=false;cancel.Enabled=true;jobs.Enabled=false;measured=0;progress.Maximum=(int)jobs.Value*3;progress.Value=0;log.Clear();assessment.Clear();var selectedUpload=upload.Checked;var selectedPublish=publish.Checked;var output=Path.Combine(AppSettings.Reports,Guid.NewGuid()+".json");
+  running=true;cancelled=false;run.Enabled=false;cancel.Enabled=true;jobs.Enabled=false;engine.Enabled=false;workload.Enabled=false;repeats.Enabled=false;sweep.Enabled=false;measured=0;progress.Maximum=(sweep.Checked?new[]{1,2,3,4,8,12,16,20,(int)jobs.Value}.Distinct().Where(n=>n<=jobs.Value).Sum():(int)jobs.Value)*(int)repeats.Value;progress.Value=0;log.Clear();assessment.Clear();var selectedUpload=upload.Checked;var selectedPublish=publish.Checked;var output=Path.Combine(AppSettings.Reports,Guid.NewGuid()+".json");
   try{
    var info=new ProcessStartInfo(settings.Python){UseShellExecute=false,CreateNoWindow=true,RedirectStandardInput=true,RedirectStandardOutput=true,RedirectStandardError=true,StandardOutputEncoding=System.Text.Encoding.UTF8,StandardErrorEncoding=System.Text.Encoding.UTF8};
-   foreach(var arg in new[]{"-u",Path.Combine(AppContext.BaseDirectory,"runner","jobs_runner.py"),"--engine","llama.cpp","--server",settings.Server,"--model",settings.Model,"--jobs",((int)jobs.Value).ToString(),"--output",output})info.ArgumentList.Add(arg);
+   foreach(var arg in new[]{"-B","-u",Path.Combine(AppContext.BaseDirectory,"runner","workload_runner.py"),"--engine",engine.Text,"--model",external?servedModel.Text.Trim():settings.Model,"--workload",workload.Text,"--repeats",((int)repeats.Value).ToString(),"--jobs",((int)jobs.Value).ToString(),"--output",output})info.ArgumentList.Add(arg);
+   info.ArgumentList.Add(external?"--endpoint":"--server");info.ArgumentList.Add(external?endpoint.Text.Trim():settings.Server);
+   if(sweep.Checked)info.ArgumentList.Add("--sweep");
    process=new Process{StartInfo=info};process.Start();job=new ProcessJob();job.Assign(process);
    if(jobs.Value>3)await process.StandardInput.WriteLineAsync(pro.Credential);process.StandardInput.Close();
    process.OutputDataReceived+=(_,e)=>{if(e.Data is not null)UI(()=>Event(e.Data));};process.ErrorDataReceived+=(_,e)=>{if(e.Data is not null)UI(()=>Append(e.Data));};process.BeginOutputReadLine();process.BeginErrorReadLine();
    await process.WaitForExitAsync();if(cancelled){status.Text=language["cancel"]+" — local runtime stopped.";return;}
    if(process.ExitCode!=0||!File.Exists(output))throw new InvalidOperationException("The benchmark did not complete. Review the event log and runtime selection.");
-   var report=JsonNode.Parse(await File.ReadAllTextAsync(output))!.AsObject();reportPath=output;assessment.Text=Reports.Assess(report);await File.WriteAllTextAsync(Path.ChangeExtension(output,".txt"),assessment.Text);progress.Value=progress.Maximum;status.Text=language["complete"];RefreshHistory();tabs.SelectedIndex=2;
+   var report=JsonNode.Parse(await File.ReadAllTextAsync(output))!.AsObject();reportPath=output;assessment.Text=File.Exists(Path.ChangeExtension(output,".md"))?await File.ReadAllTextAsync(Path.ChangeExtension(output,".md")):Reports.Assess(report);await File.WriteAllTextAsync(Path.ChangeExtension(output,".txt"),assessment.Text);progress.Value=progress.Maximum;status.Text=language["complete"];RefreshHistory();tabs.SelectedIndex=2;
    if(selectedUpload){var payload=new JsonObject{["report"]=report,["consent"]=new JsonObject{["collect"]=true,["publish"]=selectedPublish,["version"]="2026-09-15-v1"}}.ToJsonString();await File.WriteAllTextAsync(Path.Combine(AppSettings.Queue,Path.GetFileName(output)),payload);await RetryUploads();}
-  }catch(Exception e){if(!cancelled)ShowError(e);}finally{job?.Dispose();job=null;try{if(process is {HasExited:false})process.Kill(true);}catch{}process?.Dispose();process=null;running=false;run.Enabled=true;cancel.Enabled=false;jobs.Enabled=true;}
+  }catch(Exception e){if(!cancelled)ShowError(e);}finally{job?.Dispose();job=null;try{if(process is {HasExited:false})process.Kill(true);}catch{}process?.Dispose();process=null;running=false;run.Enabled=true;cancel.Enabled=false;jobs.Enabled=true;engine.Enabled=true;workload.Enabled=true;repeats.Enabled=true;sweep.Enabled=true;}
  }
  void Cancel(){if(!running)return;cancelled=true;job?.Dispose();job=null;try{if(process is {HasExited:false})process.Kill(true);}catch{}status.Text="Stopping benchmark processes…";}
  void UI(Action action){if(!IsDisposed&&IsHandleCreated)try{BeginInvoke(()=>{if(!IsDisposed)action();});}catch(InvalidOperationException){}}
- void Event(string line){try{var e=JsonNode.Parse(line)!;var type=e["event"]?.GetValue<string>();if(type=="hardware")SetHardware(e["hardware"]!.AsObject());if(e["message"] is not null){status.Text=e["message"]!.GetValue<string>();Append(status.Text);}if(type=="sample"){var s=e["sample"]!;measured++;progress.Value=Math.Min(progress.Maximum,measured);Append($"Job {s["jobId"]} · round {s["repeat"]} · {s["decodeTps"]!.GetValue<double>():F1} tok/s · first token {s["ttftMs"]!.GetValue<double>():F0} ms");}}catch(JsonException){Append(line);}}
+ void Event(string line){try{var e=JsonNode.Parse(line)!;var type=e["event"]?.GetValue<string>();if(type=="hardware")SetHardware(e["hardware"]!.AsObject());if(e["message"] is not null){status.Text=e["message"]!.GetValue<string>();Append(status.Text);}if(type=="workload-sample"){measured++;progress.Value=Math.Min(progress.Maximum,measured);}if(type=="sample"){var s=e["sample"]!;measured++;progress.Value=Math.Min(progress.Maximum,measured);Append($"Job {s["jobId"]} · round {s["repeat"]} · {s["decodeTps"]!.GetValue<double>():F1} tok/s · first token {s["ttftMs"]!.GetValue<double>():F0} ms");}}catch(JsonException){Append(line);}}
  void Append(string text){if(log.TextLength>24000)log.Text=log.Text[^12000..];log.AppendText(text+Environment.NewLine);}
  async Task RetryUploads(){if(uploading||!upload.Checked)return;uploading=true;try{foreach(var path in Directory.GetFiles(AppSettings.Queue,"*.json")){if(!upload.Checked)break;await account.Upload(await File.ReadAllTextAsync(path));File.Delete(path);}status.Text=language["uploaded"];}catch(Exception e){status.Text=e.Message+" ("+Directory.GetFiles(AppSettings.Queue,"*.json").Length+" queued)";}finally{uploading=false;}}
  void RefreshHistory(){history.Items.Clear();history.Items.AddRange(Directory.GetFiles(AppSettings.Reports,"*.json").OrderDescending().Select(x=>(object)Path.GetFileName(x)).ToArray());}
- void LoadHistory(){if(history.SelectedItem is not string name)return;try{reportPath=Path.Combine(AppSettings.Reports,name);assessment.Text=Reports.Assess(JsonNode.Parse(File.ReadAllText(reportPath))!.AsObject());}catch(Exception e){ShowError(e);}}
+ void LoadHistory(){if(history.SelectedItem is not string name)return;try{reportPath=Path.Combine(AppSettings.Reports,name);assessment.Text=File.Exists(Path.ChangeExtension(reportPath,".md"))?File.ReadAllText(Path.ChangeExtension(reportPath,".md")):Reports.Assess(JsonNode.Parse(File.ReadAllText(reportPath))!.AsObject());}catch(Exception e){ShowError(e);}}
  void Export(){if(reportPath is null)return;using var d=new SaveFileDialog{Filter="Benchmark report|*.json",FileName=Path.GetFileName(reportPath)};if(d.ShowDialog()==DialogResult.OK)File.Copy(reportPath,d.FileName,true);}
  async Task RefreshCatalog(){if(!online.Checked){catalogStatus.Text=language["offlineHelp"];return;}catalogStatus.Text=language["loadingCatalog"];try{var result=await Catalog.Load();if(!online.Checked)return;models.Items.Clear();models.Items.AddRange(result.Cast<object>().ToArray());catalogStatus.Text="Live Hugging Face trending selection · small models first · "+DateTime.Now.ToString("g");}catch{catalogStatus.Text=language["offlineHelp"];}}
 }

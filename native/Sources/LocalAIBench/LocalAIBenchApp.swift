@@ -64,11 +64,13 @@ struct WorkspaceView: View {
             sidebar
             ScrollViewReader { proxy in
                 ScrollView { VStack(alignment: .leading, spacing: 24) {
-                    HStack { Text("TOKFIRE BENCH / TOKFIRE LABS").font(.system(size: 10, weight: .semibold, design: .monospaced)).tracking(1.5).foregroundColor(accent); Spacer(); Tag(text: "v0.5.1 · Apple Silicon") }
+                    HStack { Text("TOKFIRE BENCH / TOKFIRE LABS").font(.system(size: 10, weight: .semibold, design: .monospaced)).tracking(1.5).foregroundColor(accent); Spacer(); Tag(text: "v0.7.0 · Apple Silicon") }
                     VStack(alignment: .leading, spacing: 9) { Text(L(page == .discover ? "headline" : page.rawValue)).font(.system(size: 30, weight: .bold)); Text(L("subhead")).foregroundColor(muted) }
                     switch page { case .discover: discovery; case .benchmark: benchmark; case .history: history; case .settings: settings }
                     Label(L("privacy"), systemImage: "lock.shield").font(.caption).foregroundColor(muted)
                 }.padding(30).frame(maxWidth: 1120) }.background(canvas)
+                .onChange(of: bench.running) { running in if running && page == .benchmark { DispatchQueue.main.asyncAfter(deadline: .now()+0.2) { withAnimation { proxy.scrollTo("live-progress", anchor: .top) } } } }
+                .onChange(of: bench.workloadResult?.id) { id in if id != nil && page == .benchmark { DispatchQueue.main.asyncAfter(deadline: .now()+0.2) { withAnimation { proxy.scrollTo("results", anchor: .top) } } } }
                 .onChange(of: bench.result?.id) { id in if id != nil && page == .benchmark { DispatchQueue.main.asyncAfter(deadline: .now()+0.2) { withAnimation { proxy.scrollTo("results", anchor: .top) } } } }
             }
         }.foregroundColor(ink).tint(accent).preferredColorScheme(.light)
@@ -88,6 +90,9 @@ struct WorkspaceView: View {
             if let i = CommandLine.arguments.firstIndex(of: "--language"), CommandLine.arguments.indices.contains(i+1) { lang.code = CommandLine.arguments[i+1] }
             if CommandLine.arguments.contains("--offline") || !catalog.online { catalog.setOnline(false) } else { catalog.refresh() }
             if CommandLine.arguments.contains("--no-upload") { bench.uploads.enabled = false }
+            if let i = CommandLine.arguments.firstIndex(of: "--workload"), CommandLine.arguments.indices.contains(i+1) { bench.workload = CommandLine.arguments[i+1] }
+            bench.sweep = CommandLine.arguments.contains("--sweep")
+            if CommandLine.arguments.contains("--legacy-jobs") { bench.workloadMode = false }
             if let i = CommandLine.arguments.firstIndex(of: "--jobs"), CommandLine.arguments.indices.contains(i+1), let count = Int(CommandLine.arguments[i+1]) { bench.concurrentJobs = count }
             if let i = CommandLine.arguments.firstIndex(of: "--run-model"), CommandLine.arguments.indices.contains(i+1) { bench.add([URL(fileURLWithPath: CommandLine.arguments[i+1])]); bench.backend = "llama.cpp"; bench.trial = CommandLine.arguments.contains("--quick-trial"); bench.concurrentMode = !bench.trial && !CommandLine.arguments.contains("--standard-test"); page = .benchmark; bench.run() }
             if let i = CommandLine.arguments.firstIndex(of: "--run-mlx"), CommandLine.arguments.indices.contains(i+1) { bench.mlxModel = URL(fileURLWithPath: CommandLine.arguments[i+1]); bench.backend = "oMLX"; page = .benchmark; bench.run() }
@@ -147,8 +152,13 @@ struct WorkspaceView: View {
     private var benchmark: some View {
         VStack(spacing: 20) {
             Panel(title: "01 / " + L("selectModel")) {
-                Picker(L("runtime"), selection: $bench.backend) { Text("llama.cpp + GGUF").tag("llama.cpp"); Text("oMLX + MLX").tag("oMLX") }.pickerStyle(.segmented).disabled(bench.running)
-                if bench.backend == "oMLX" {
+                Picker(L("runtime"), selection: $bench.backend) { Text("llama.cpp + GGUF").tag("llama.cpp"); Text("oMLX + MLX").tag("oMLX"); Text("Ollama").tag("Ollama"); Text("vLLM").tag("vLLM") }.pickerStyle(.segmented).disabled(bench.running)
+                if bench.externalRuntime {
+                    TextField(L("localEndpoint"), text: $bench.endpoint).textFieldStyle(.roundedBorder).disabled(bench.running)
+                    TextField(L("servedModel"), text: $bench.servedModel).textFieldStyle(.roundedBorder).disabled(bench.running)
+                    Text(L("endpointHelp")).font(.caption)
+                    JobControls(bench: bench, pro: bench.pro)
+                } else if bench.backend == "oMLX" {
                     HStack { Image(systemName: "folder"); Text(bench.mlxModel?.lastPathComponent ?? L("noModels")).lineLimit(2); Spacer(); Button(L("selectMLX")) { bench.chooseMLX() }.disabled(bench.running) }
                     Button("Hugging Face · MLX ↗") { open("https://huggingface.co/models?library=mlx&sort=trending") }
                     JobControls(bench: bench, pro: bench.pro)
@@ -159,18 +169,28 @@ struct WorkspaceView: View {
                     if bench.concurrentMode { JobControls(bench: bench, pro: bench.pro); if bench.models.count != 1 { Text(L("oneModelJobs")).font(.caption).foregroundColor(.orange) } }
                     else { Text(bench.trial ? "512 input / 32 output · 1 ×" : "512 + 2048 input / 128 output · 3 ×").font(.caption).foregroundColor(muted) }
                 }
+                if bench.usesJobs {
+                    Toggle(L("workloadMode"), isOn: $bench.workloadMode).disabled(bench.running || bench.externalRuntime)
+                    if bench.usesWorkloads {
+                        Picker(L("workload"), selection: $bench.workload) { ForEach(["short-chat", "business", "long-summary", "agent-tools"], id: \.self) { Text(L($0)).tag($0) } }.disabled(bench.running)
+                        Stepper("\(L("repeats")): \(bench.repeats)", value: $bench.repeats, in: 3...5).disabled(bench.running)
+                        Toggle(L("sweep"), isOn: $bench.sweep).disabled(bench.running)
+                        Text(L("workloadHelp")).font(.caption).foregroundColor(muted)
+                    }
+                }
                 Divider(); UploadPanel(store: bench.uploads)
                 HStack { Spacer(); if bench.running { Button(L("stop")) { bench.cancel() }.disabled(bench.stopping) } else { Button { bench.run() } label: { Label(L("start"), systemImage: "play.fill").padding(.vertical, 5) }.buttonStyle(.borderedProminent).disabled(!bench.validSelection || catalog.downloading) } }
             }
             Panel(title: "02 / " + L("progress")) {
                 HStack { Text(phase).font(.title2.bold()); if bench.running { ProgressView().controlSize(.small) }; Spacer(); if let start = bench.started, bench.running { TimelineView(.periodic(from: .now, by: 1)) { _ in Text("\(Int(Date().timeIntervalSince(start))) s").monospacedDigit() } } }
+                Text(bench.message).font(.callout).textSelection(.enabled)
                 ProgressView(value: bench.progress); Text("\(bench.completedSamples) / \(bench.totalSamples) · " + L("completed")).font(.caption).foregroundColor(muted)
                 if ["測試失敗", "無法啟動", "需要設定"].contains(bench.phase) { Text(bench.message).font(.callout).foregroundColor(.red).textSelection(.enabled) }
                 if let job = bench.latest?.jobId { Tag(text: "Job \(job)") }
                 if let sample = bench.latest { HStack { Metric(title: L("speed"), value: String(format: "%.1f", sample.decodeTps), unit: "tok/s"); Metric(title: L("ttft"), value: String(format: "%.0f", sample.ttftMs), unit: "ms"); if let n = sample.concurrency { Metric(title: L("concurrent"), value: "\(n)", unit: "") } } }
                 DisclosureGroup(L("events")) { Text(bench.events.isEmpty ? bench.message : bench.events.suffix(30).joined(separator: "\n")).font(.system(.caption, design: .monospaced)).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }
-            }
-            if let report = bench.result { results(report).id("results") }
+            }.id("live-progress")
+            if let report = bench.result { results(report).id("results") }; if let report = bench.workloadResult { WorkloadResults(bench: bench, report: report).id("results") }
         }
     }
     private func results(_ report: RunReport) -> some View {
@@ -205,7 +225,9 @@ struct WorkspaceView: View {
         }
     }
     private var history: some View {
-        VStack(spacing: 18) { HStack { Text("\(bench.history.count)"); Spacer(); Button(L("reportFolder")) { try? FileManager.default.createDirectory(at: reportsFolder, withIntermediateDirectories: true); NSWorkspace.shared.open(reportsFolder) } }; if bench.history.isEmpty { Text(L("noReports")) }; ForEach(bench.history) { item in Panel { HStack { VStack(alignment: .leading, spacing: 6) { Text(item.report.hardware.chip).font(.headline); Text(item.report.measuredAt).font(.caption).foregroundColor(muted) }; Spacer(); Tag(text: item.report.isOMLX ? "oMLX" : L(item.report.isTrial ? "trial" : "fullTest")); Button(L("view")) { bench.inspect(item); page = .benchmark }.disabled(bench.running) } } } }
+        VStack(spacing: 18) {
+            ForEach(bench.workloadHistory, id: \.path) { url in Panel { HStack { Text("0.7 · " + url.deletingPathExtension().lastPathComponent).lineLimit(1); Spacer(); Button(L("view")) { bench.inspectWorkload(url); page = .benchmark }.disabled(bench.running) } } }
+            HStack { Text("\(bench.history.count + bench.workloadHistory.count)"); Spacer(); Button(L("reportFolder")) { try? FileManager.default.createDirectory(at: reportsFolder, withIntermediateDirectories: true); NSWorkspace.shared.open(reportsFolder) } }; if bench.history.isEmpty && bench.workloadHistory.isEmpty { Text(L("noReports")) }; ForEach(bench.history) { item in Panel { HStack { VStack(alignment: .leading, spacing: 6) { Text(item.report.hardware.chip).font(.headline); Text(item.report.measuredAt).font(.caption).foregroundColor(muted) }; Spacer(); Tag(text: item.report.isOMLX ? "oMLX" : L(item.report.isTrial ? "trial" : "fullTest")); Button(L("view")) { bench.inspect(item); page = .benchmark }.disabled(bench.running) } } } }
     }
     private var settings: some View {
         VStack(spacing: 20) {
@@ -268,7 +290,7 @@ struct JobControls: View {
                 Tag(text: pro.active ? "Pro · 20" : "Free · 3")
             }
             Text(L("jobsHelp")).font(.caption).foregroundColor(muted)
-            Text("\(bench.concurrentJobs) jobs × 3 · 128 max output").font(.caption).monospacedDigit()
+            Text(bench.usesWorkloads ? "\(bench.expectedSamples) \(L("measuredJobs"))" : "\(bench.concurrentJobs) jobs × 3 · 128 max output").font(.caption).monospacedDigit()
             if !pro.active { DisclosureGroup(L("proUnlock")) { ProPanel(store: pro).padding(.top, 8) } }
         }.disabled(bench.running)
         .onChange(of: pro.limit) { limit in if bench.concurrentJobs > limit { bench.concurrentJobs = limit } }

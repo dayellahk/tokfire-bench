@@ -3,7 +3,7 @@ import {rawDb} from '@/db/raw';
 import {nativeUploadSchema} from '@/lib/serving';
 import {saveSubmission} from '@/lib/repository';
 export async function POST(request:Request){try{
- const owner=await writer(request);const parsed=nativeUploadSchema.safeParse(await body(request));
+ const owner=await writer(request);const parsed=nativeUploadSchema.safeParse(await body(request, 1_500_000));
  if(!parsed.success)throw new ApiError(400,'Invalid report or consent.');
  const {report,consent}=parsed.data;const db=rawDb();
  if(Date.parse(report.measuredAt)>Date.now()+300000)throw new ApiError(400,'Future report date');

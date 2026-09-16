@@ -1,0 +1,1 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.tokfire.bench.tests"><uses-sdk android:minSdkVersion="26" android:targetSdkVersion="35"/><application android:label="TokFire QA"/><instrumentation android:name="com.tokfire.bench.Instrumentation" android:targetPackage="com.tokfire.bench"/></manifest>

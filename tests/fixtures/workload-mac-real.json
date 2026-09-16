@@ -1,0 +1,166 @@
+{
+  "specVersion": "tokfire-workloads-v1",
+  "runnerVersion": "0.7.0",
+  "runId": "cbd82bc7-d213-4517-91bc-d360ac1d1073",
+  "measuredAt": "2026-09-16T02:53:03Z",
+  "hardware": {
+    "chip": "Apple M2 Max",
+    "machine": "Mac14,5",
+    "cpuCores": 12,
+    "memoryBytes": 103079215104,
+    "osVersion": "26.5.2",
+    "platform": "macOS",
+    "architecture": "arm64",
+    "gpuNames": [
+      "Apple M2 Max"
+    ],
+    "gpuMemoryBytes": null
+  },
+  "runtime": {
+    "name": "llama.cpp",
+    "binarySha256": "8939a1cf8a4e9a5cc18d6cd4d2d55440b48f8a44db00abe459a28d837ea051f7",
+    "management": "managed",
+    "identity": "local-file-sha256",
+    "gpuLayersRequested": 999
+  },
+  "settings": {
+    "workload": "short-chat",
+    "workloadSha256": "e41fc68cf63a8d8901135f48fe36461753ed6570e956d8035b043d68433d15c9",
+    "concurrencyLevels": [
+      1
+    ],
+    "repeats": 3,
+    "maxOutputTokens": 512,
+    "contextTokens": 4096,
+    "warmups": 1,
+    "temperature": 0,
+    "cachePolicy": "unique-prefix; report observed cache counts",
+    "targetTps": [
+      100,
+      200
+    ],
+    "timing": "runtime decode/prefill; client first output and wall time",
+    "inferenceLocation": "same-device",
+    "hardwareRole": "inference-host",
+    "timeoutSeconds": 180
+  },
+  "models": [
+    {
+      "modelName": "MiniCPM5-2B-Q4_K_M.gguf",
+      "modelSha256": "ec2d5801640099e97d8d7e8003ad4d81f336e757811f03a26173dddf386602fd",
+      "loadMs": 1228.5957080021035,
+      "samples": [
+        {
+          "jobId": 1,
+          "concurrency": 1,
+          "repeat": 1,
+          "status": "complete",
+          "errorCode": null,
+          "elapsedMs": 7438.149624998914,
+          "requests": [
+            {
+              "inputTokens": 300,
+              "outputTokens": 296,
+              "ttftMs": 666.5156669987482,
+              "firstVisibleMs": 666.5156669987482,
+              "elapsedMs": 7437.57766699855,
+              "decodeTps": 43.5716782909504,
+              "prefillTps": 477.7838474022096,
+              "streamTps": 43.72387498469137,
+              "endToEndTps": 39.797903733279796,
+              "cachedTokens": 0,
+              "finishReason": "stop"
+            }
+          ],
+          "toolCalls": 0,
+          "toolErrors": 0,
+          "toolMs": 0.0
+        },
+        {
+          "jobId": 1,
+          "concurrency": 1,
+          "repeat": 2,
+          "status": "complete",
+          "errorCode": null,
+          "elapsedMs": 6934.783208002045,
+          "requests": [
+            {
+              "inputTokens": 302,
+              "outputTokens": 274,
+              "ttftMs": 690.2827499980049,
+              "firstVisibleMs": 690.2827499980049,
+              "elapsedMs": 6934.467874998518,
+              "decodeTps": 43.72233721357064,
+              "prefillTps": 463.62180741887,
+              "streamTps": 43.880755918672214,
+              "endToEndTps": 39.512765065633616,
+              "cachedTokens": 0,
+              "finishReason": "stop"
+            }
+          ],
+          "toolCalls": 0,
+          "toolErrors": 0,
+          "toolMs": 0.0
+        },
+        {
+          "jobId": 1,
+          "concurrency": 1,
+          "repeat": 3,
+          "status": "complete",
+          "errorCode": null,
+          "elapsedMs": 7842.13174999968,
+          "requests": [
+            {
+              "inputTokens": 305,
+              "outputTokens": 296,
+              "ttftMs": 692.6334999989194,
+              "firstVisibleMs": 692.6334999989194,
+              "elapsedMs": 7841.779499998665,
+              "decodeTps": 41.26647511561607,
+              "prefillTps": 454.0007889194037,
+              "streamTps": 41.4134547841577,
+              "endToEndTps": 37.74653444413355,
+              "cachedTokens": 0,
+              "finishReason": "stop"
+            }
+          ],
+          "toolCalls": 0,
+          "toolErrors": 0,
+          "toolMs": 0.0
+        }
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "concurrency": 1,
+      "repeat": 1,
+      "wallMs": 7460.106082999118,
+      "aggregateTps": 39.677719955558835
+    },
+    {
+      "concurrency": 1,
+      "repeat": 2,
+      "wallMs": 6935.934790999454,
+      "aggregateTps": 39.504408310695375
+    },
+    {
+      "concurrency": 1,
+      "repeat": 3,
+      "wallMs": 7842.798500001663,
+      "aggregateTps": 37.7416301081734
+    }
+  ],
+  "telemetry": {
+    "before": {
+      "batteryPercent": null,
+      "batteryTemperatureC": null
+    },
+    "after": {
+      "batteryPercent": null,
+      "batteryTemperatureC": null
+    },
+    "energyJoules": null,
+    "peakGpuMemoryBytes": null
+  }
+}

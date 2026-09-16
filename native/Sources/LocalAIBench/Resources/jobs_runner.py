@@ -59,14 +59,14 @@ def free_port():
     with socket.socket() as sock:
         sock.bind(('127.0.0.1',0)); return sock.getsockname()[1]
 
-def launch(engine, binary, model, slots, cores, root):
+def launch(engine, binary, model, slots, cores, root, context=4096, gpu_layers=999):
     port = free_port(); base = f'http://127.0.0.1:{port}'
     if engine == 'oMLX':
         directory=root/'models'; directory.mkdir(); (directory/'benchmark-model').symlink_to(model,target_is_directory=True)
         args=[binary,'serve','--model-dir',str(directory),'--base-path',str(root/'data'),'--host','127.0.0.1','--port',str(port),'--no-cache','--no-hf-cache','--max-concurrent-requests',str(slots),'--memory-guard','safe','--log-level','warning']
         health='/v1/models'
     else:
-        args=[binary,'-m',str(model),'--host','127.0.0.1','--port',str(port),'-c',str(4096*slots),'-ngl','999','-np',str(slots),'-b','512','-ub','512','-t',str(cores),'-tb',str(cores),'-fa','off','-ctk','f16','-ctv','f16','--no-webui','--no-warmup']
+        args=[binary,'-m',str(model),'--host','127.0.0.1','--port',str(port),'-c',str(context*slots),'-ngl',str(gpu_layers),'-np',str(slots),'-b','512','-ub','512','-t',str(cores),'-tb',str(cores),'-fa','off','-ctk','f16','-ctv','f16','--no-webui','--no-warmup']
         health='/health'
     env={k:v for k,v in runtime_env().items() if not k.startswith(('OMLX_','MLX_'))}
     with (root/'server.log').open('w') as log:

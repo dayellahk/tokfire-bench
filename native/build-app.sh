@@ -21,8 +21,8 @@ cat > "$bench_app/Contents/Info.plist" <<'PLIST'
 <key>NSHumanReadableCopyright</key><string>TokFire Labs</string>
 <key>CFBundleIconFile</key><string>AppIcon</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.5.2</string>
-<key>CFBundleVersion</key><string>7</string>
+<key>CFBundleShortVersionString</key><string>0.7.0</string>
+<key>CFBundleVersion</key><string>8</string>
 <key>LSMinimumSystemVersion</key><string>13.0</string>
 <key>NSHighResolutionCapable</key><true/>
 </dict></plist>
@@ -33,11 +33,12 @@ xattr -dr com.apple.FinderInfo "$bench_app" 2>/dev/null || true
 xattr -dr com.apple.ResourceFork "$bench_app" 2>/dev/null || true
 codesign --force --sign - "$bench_app"
 codesign --verify --strict "$bench_app"
-mkdir -p build
+bench_output="${TOKFIRE_APP_OUTPUT:-$PWD/build/TokFire Bench.app}"
+mkdir -p "$(dirname "$bench_output")"
 # Replace the generated bundle so stale resources cannot invalidate its signature.
-rm -rf "$PWD/build/TokFire Bench.app"
-ditto --noextattr --norsrc "$bench_app" "$PWD/build/TokFire Bench.app"
-xattr -dr com.apple.FinderInfo "$PWD/build/TokFire Bench.app" 2>/dev/null || true
-xattr -dr com.apple.ResourceFork "$PWD/build/TokFire Bench.app" 2>/dev/null || true
-codesign --verify --strict "$PWD/build/TokFire Bench.app"
-printf 'Ad-hoc signed local developer app (not notarized): %s\n' "$PWD/build/TokFire Bench.app"
+rm -rf "$bench_output"
+ditto --noextattr --norsrc "$bench_app" "$bench_output"
+xattr -dr com.apple.FinderInfo "$bench_output" 2>/dev/null || true
+xattr -dr com.apple.ResourceFork "$bench_output" 2>/dev/null || true
+codesign --verify --strict "$bench_output"
+printf 'Ad-hoc signed local developer app (not notarized): %s\n' "$bench_output"
