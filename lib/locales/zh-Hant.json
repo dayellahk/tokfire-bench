@@ -384,5 +384,15 @@
   "No sign-in required. Guest reports belong to this browser or app. Keep its website data to manage them; another browser has a separate guest identity.": "無需登入。訪客報告屬於此瀏覽器或 app，請保留其網站資料以管理報告；其他瀏覽器會使用另一個訪客身份。",
   "Runs / contributors": "報告／提交身份",
   "Uploads contain the hardware fields above, OS version, runtime/model hashes, run ID, timestamps and timing samples. The server uses a private guest credential or your signed-in account for ownership and deletion. Your identity is not displayed in comparisons. This is pseudonymous, not fully anonymous.": "上傳包含上述硬件、作業系統、模型及運行環境指紋、測試 ID、時間及測量數據。私人訪客憑證或帳戶用於管理及刪除報告，公開比較不顯示身份。這並非完全匿名。",
-  "The benchmark runner makes loopback requests only and saves reports locally. The optional MiniCPM launcher downloads the official model from Hugging Face and verifies its checksum. Browser import does not upload. Saving requires collection consent but no sign-in; publication is a separate opt-in. A private guest credential or optional account identifies the report owner. Published comparisons omit identity but include hardware and hashes. Published comparisons are visible to site visitors. Private reports require the guest credential or account that uploaded them. Clearing guest website data removes access.": "報告會先儲存在本機。瀏覽器匯入不會上傳；儲存需要收集同意，無需登入，公開分享另行選擇。訪客憑證或帳戶用於管理報告，公開結果不含身份。清除訪客網站資料後會失去私人報告管理權限。"
+  "The benchmark runner makes loopback requests only and saves reports locally. The optional MiniCPM launcher downloads the official model from Hugging Face and verifies its checksum. Browser import does not upload. Saving requires collection consent but no sign-in; publication is a separate opt-in. A private guest credential or optional account identifies the report owner. Published comparisons omit identity but include hardware and hashes. Published comparisons are visible to site visitors. Private reports require the guest credential or account that uploaded them. Clearing guest website data removes access.": "報告會先儲存在本機。瀏覽器匯入不會上傳；儲存需要收集同意，無需登入，公開分享另行選擇。訪客憑證或帳戶用於管理報告，公開結果不含身份。清除訪客網站資料後會失去私人報告管理權限。",
+  "COMMUNITY REPORT · CHALLENGE CHECKED": "社群報告 · 已檢查測試憑證",
+  "Community uploads are self-reported. Challenge checks prevent replay and check consistency; they do not independently verify hardware or model execution.": "社群資料由用戶自行提交。測試憑證檢查用於防重播及檢查一致性，並非獨立驗證硬件或模型執行。",
+  "Challenge checked means a one-time server ticket and consistency checks passed. Hardware and model execution remain self-reported. Quarantined reports are excluded from rankings.": "已檢查測試憑證代表通過一次性伺服器憑證及一致性檢查；硬件及模型執行仍屬自行申報。已隔離的報告不會列入排行榜。",
+  "Held for review": "待覆核",
+  "Excluded from rankings pending review": "待覆核期間不列入排行榜",
+  "Challenge checked · hardware not independently verified": "已檢查測試憑證 · 硬件未經獨立驗證",
+  "Community report · unverified": "社群報告 · 未獨立驗證",
+  "Saved privately for review. Excluded from rankings.": "已私人儲存，等待覆核；不列入排行榜。",
+  "Publication requested. Held for review and excluded from rankings.": "已收到公開申請，覆核期間不列入排行榜。",
+  "Deleting a report removes its measurements. Minimal run IDs and one-way digests remain to prevent replay. Temporary abuse counters and expired ticket details are cleaned up on subsequent requests.": "刪除報告會移除其量度數據；系統保留最少量測試 ID 及單向摘要以防止重播。暫時性限流紀錄及已過期的測試憑證資料會在後續請求時清理。"
 }

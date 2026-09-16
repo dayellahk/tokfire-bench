@@ -12,7 +12,7 @@ Native macOS and Windows apps now include fixed chat/business/long-context and b
 Android requires an existing on-device or explicitly selected LAN model runtime; weights and an inference engine are not bundled. Agent tests use local fixtures, not Hermes/OpenClaw integration. Development builds are not production-signed.
 
 
-Local AI benchmarks for macOS and Windows, with an account-based web portal by **TokFire Labs**.
+Local AI benchmarks for macOS and Windows, with a guest-upload web portal and optional accounts by **TokFire Labs**.
 
 Website: https://tokfires.com
 
@@ -89,3 +89,7 @@ SMTP/email verification/password recovery is not configured yet. Do not describe
 Guest upload flow: no account is required. The live website and native upload page
 establish a device-local guest credential; publication remains opt-in. See
 [guest upload details](docs/GUEST-UPLOADS.md).
+
+### Guest upload protection
+
+Online 0.7 workload tests use one-time run challenges, replay receipts, durable rate limits and quarantine. No login is required. Challenge checks are not hardware attestation. See [design and retention](docs/UPLOAD-INTEGRITY.md) and [validation](docs/UPLOAD-INTEGRITY-VALIDATION.md).

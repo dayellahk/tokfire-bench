@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {challengeEvidenceSchema} from './challenge-protocol.ts';
 const pos=z.number().finite().positive();
 const nonneg=z.number().finite().nonnegative();
 const hash=z.string().regex(/^[a-f0-9]{64}$/);
@@ -20,6 +21,7 @@ export const WORKLOAD_PROFILES={
  'short-chat':{output:512,context:4096},business:{output:1024,context:8192},'long-summary':{output:1536,context:32768},'agent-tools':{output:256,context:8192}
 } as const;
 export const workloadSchema=z.object({
+ challenge:challengeEvidenceSchema.optional(),
  specVersion:z.literal('tokfire-workloads-v1'),runnerVersion:z.literal('0.7.0'),runId:z.string().uuid(),measuredAt:z.string().datetime(),
  hardware:z.object({platform:z.enum(['macOS','Windows','Linux','Android']),architecture:label(32),chip:label(160),machine:label(160),cpuCores:pos.int().max(4096),memoryBytes:pos.int().max(2**50),osVersion:label(80),gpuNames:z.array(label(160)).max(8),gpuMemoryBytes:z.array(pos.int().max(2**50)).max(8).nullable()}).strict(),
  runtime:z.object({name:z.enum(['llama.cpp','oMLX','Ollama','vLLM']),binarySha256:hash.nullable(),management:z.enum(['managed','external-loopback','external-network']),identity:z.enum(['local-file-sha256','unverified-server-model-id']),gpuLayersRequested:nonneg.int().max(999).nullable()}).strict(),

@@ -28,8 +28,9 @@ Choose 3–5 repeats and an optional concurrency sweep.
 Quick trial accepts one model. A local report and commentary are saved in:
 ~/Library/Application Support/LocalAIBench/Reports/
 
-Automatic upload is ON by default and visible before Run. Sign in once
-with the website account. Public comparison sharing is OFF by default.
+Automatic upload is ON by default and visible before Run. Guest uploads
+need no sign-in. Online workload tests obtain a one-time server challenge.
+Challenge checks do not independently verify hardware. Public comparison sharing is OFF by default.
 Failed or offline uploads remain queued; local reports are preserved.
 Quick trials and oMLX serving reports are stored separately from standard
 llama.cpp comparisons. Process RSS is not total GPU/unified memory.

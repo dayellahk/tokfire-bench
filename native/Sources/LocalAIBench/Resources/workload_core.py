@@ -100,7 +100,11 @@ def assessment(report):
 
 class AgentTools:
     """Bounded in-memory fixture. Model output can never run code, files, or network tools."""
-    def __init__(self):
+    def __init__(self, nonce=None):
+        prices = [129, 249, 89] if nonce is None else [100+int(nonce[0:2],16),200+int(nonce[2:4],16),70+int(nonce[4:6],16)]
+        self.records = [{'quantity': q, 'unit_price': p} for q,p in zip([2,1,3],prices)]
+        self.totals = [r['quantity']*r['unit_price'] for r in self.records]
+        self.total = sum(self.totals)
         self.stage = 0
         self.calls = 0
         self.errors = 0
@@ -110,17 +114,17 @@ class AgentTools:
             value = json.loads(content.strip())
             if not isinstance(value, dict): raise ValueError()
             if set(value) == {'answer'}:
-                return None, 'complete' if self.stage == 2 and type(value['answer']) in (int, float) and value['answer'] == 774 else ('partial' if self.stage else 'failure')
+                return None, 'complete' if self.stage == 2 and type(value['answer']) in (int, float) and value['answer'] == self.total else ('partial' if self.stage else 'failure')
             self.calls += 1
             if set(value) != {'tool', 'arguments'}: raise ValueError()
             if self.stage == 0 and value == {'tool': 'lookup', 'arguments': {'table': 'orders'}}:
                 self.stage = 1
-                return {'records': [{'quantity': 2, 'unit_price': 129}, {'quantity': 1, 'unit_price': 249}, {'quantity': 3, 'unit_price': 89}]}, None
-            if self.stage == 1 and value.get('tool') == 'sum' and value.get('arguments') == {'values': [258, 249, 267]}:
+                return {'records': self.records}, None
+            if self.stage == 1 and value.get('tool') == 'sum' and value.get('arguments') == {'values': self.totals}:
                 # Require numeric types: True compares equal to 1 in Python.
                 if any(type(x) not in (int, float) for x in value['arguments']['values']): raise ValueError()
                 self.stage = 2
-                return {'total': 774}, None
+                return {'total': self.total}, None
             raise ValueError()
         except (ValueError, TypeError, KeyError):
             self.errors += 1

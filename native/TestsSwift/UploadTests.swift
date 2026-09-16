@@ -2,6 +2,44 @@ import XCTest
 import WebKit
 @testable import LocalAIBench
 final class UploadTests: XCTestCase {
+    @MainActor func testRealChallengeRunAndGuestUpload() async throws {
+        guard let model=ProcessInfo.processInfo.environment["TOKFIRE_REAL_CHALLENGE_MODEL"] else { throw XCTSkip("Opt-in real local model run") }
+        let origin=ProcessInfo.processInfo.environment["TOKFIRE_GUEST_TEST_ORIGIN"] ?? "https://tokfires.com"
+        let folder=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let suite="TokFire.ChallengeQA."+UUID().uuidString
+        let prefs=try XCTUnwrap(UserDefaults(suiteName:suite));prefs.set(true,forKey:"autoUpload")
+        defer { prefs.removePersistentDomain(forName:suite);try? FileManager.default.removeItem(at:folder) }
+        let store=UploadStore(origin:origin,queueDirectory:folder.appendingPathComponent("outbox"),preferences:prefs,arguments:[])
+        let config:[String:Any] = ["workload":"agent-tools","engine":"llama.cpp","model":URL(fileURLWithPath:model).lastPathComponent,"concurrencyLevels":[1],"repeats":3]
+        let issued=await store.prepareChallenge(config)
+        let ticket=try XCTUnwrap(issued)
+        defer {try? FileManager.default.removeItem(at:ticket)}
+        let root=URL(fileURLWithPath:#filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let script=root.appendingPathComponent("native/Sources/LocalAIBench/Resources/workload_runner.py")
+        let output=folder.appendingPathComponent("report.json"),log=folder.appendingPathComponent("runner.log")
+        FileManager.default.createFile(atPath:log.path,contents:nil)
+        let exit=try await Task.detached { () throws -> Int32 in
+            let process=Process();process.executableURL=URL(fileURLWithPath:"/opt/homebrew/bin/python3")
+            process.arguments=["-B","-u",script.path,"--engine","llama.cpp","--server","/opt/homebrew/bin/llama-server","--model",model,"--workload","agent-tools","--jobs","1","--repeats","3","--challenge",ticket.path,"--output",output.path]
+            let handle=try FileHandle(forWritingTo:log);defer {try? handle.close()}
+            process.standardOutput=handle;process.standardError=handle;try process.run();process.waitUntilExit();return process.terminationStatus
+        }.value
+        let diagnostic=try String(contentsOf:log,encoding:.utf8)
+        XCTAssertEqual(exit,0,diagnostic)
+        guard exit==0 else {return}
+        let report=try JSONSerialization.jsonObject(with:Data(contentsOf:output)) as! [String:Any]
+        let runID=try XCTUnwrap(report["runId"] as? String)
+        store.enqueue(output,consent:true,publication:false)
+        for _ in 0..<300 {if store.status=="uploaded" {break};try await Task.sleep(nanoseconds:100_000_000)}
+        XCTAssertEqual(store.status,"uploaded");XCTAssertEqual(store.pending,0)
+        let (list,_)=try await store.apiRequest("/api/v1/submissions",method:"GET")
+        let rows=(try JSONSerialization.jsonObject(with:list) as! [String:Any])["results"] as! [[String:Any]]
+        let row=try XCTUnwrap(rows.first { $0["runId"] as? String == runID })
+        XCTAssertEqual(row["isPublic"] as? Int,0);XCTAssertEqual(row["integrityStatus"] as? String,"challenge-checked")
+        let (_,deleted)=try await store.apiRequest("/api/v1/submissions/"+(row["id"] as! String),method:"DELETE")
+        XCTAssertEqual((deleted as? HTTPURLResponse)?.statusCode,200)
+    }
+
     @MainActor func testGuestUploadWithoutSignIn() async throws {
         guard let origin=ProcessInfo.processInfo.environment["TOKFIRE_GUEST_TEST_ORIGIN"] else { throw XCTSkip("Opt-in guest deployment integration") }
         let folder=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -12,6 +50,7 @@ final class UploadTests: XCTestCase {
         let root=URL(fileURLWithPath:#filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         var report=try JSONSerialization.jsonObject(with:Data(contentsOf:root.appendingPathComponent("tests/fixtures/workload-mac-real.json"))) as! [String:Any]
         let id=UUID().uuidString;report["runId"]=id
+        var hardware=report["hardware"] as! [String:Any];hardware["chip"]="Private QA "+id;report["hardware"]=hardware
         let file=folder.appendingPathComponent("report.tmp");try JSONSerialization.data(withJSONObject:report).write(to:file)
         store.enqueue(file,consent:true,publication:false)
         for _ in 0..<300 { if store.status=="uploaded" { break };try await Task.sleep(nanoseconds:100_000_000) }

@@ -11,7 +11,7 @@ const a=await guest(),b=await guest();check(a!==b,'independent credentials');let
 try{
  check((await req('/api/v1/submissions')).status===401,'missing credential cannot list private reports');
  check((await req('/api/guest',{method:'POST',headers:{origin:'https://wrong.invalid'}})).status===403,'cross-site guest creation blocked');
- const report=JSON.parse(await readFile(new URL('../tests/fixtures/workload-mac-real.json',import.meta.url)));report.runId=crypto.randomUUID();
+ const report=JSON.parse(await readFile(new URL('../tests/fixtures/workload-mac-real.json',import.meta.url)));report.runId=crypto.randomUUID();report.hardware.chip="Private QA "+report.runId;
  const data={report,consent:{collect:true,publish:false,version:'2026-09-15-v1'}};
  const first=await req('/api/v2/submissions',{method:'POST',cookie:a,data});check(first.status===201&&first.body.stored,'guest upload accepted');id=first.body.id;
  const again=await req('/api/v2/submissions',{method:'POST',cookie:a,data});check(again.status===200&&again.body.duplicate,'retry is idempotent');

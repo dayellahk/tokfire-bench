@@ -142,7 +142,8 @@
     "workloadSmooth": "All measured requests meet the interactive guideline.",
     "workloadSlow": "Some requests fall below the interactive guideline, or runtime metrics are unavailable.",
     "workloadPerJob": "Per-job results",
-    "workloadDetails": "Full technical assessment and limitations"
+    "workloadDetails": "Full technical assessment and limitations",
+    "uploadReview": "Saved · held for review, excluded from rankings"
   },
   "bn": {
     "accountConnected": "অতিথি আপলোড প্রস্তুত",
@@ -287,7 +288,8 @@
     "workloadSmooth": "All measured requests meet the interactive guideline.",
     "workloadSlow": "Some requests fall below the interactive guideline, or runtime metrics are unavailable.",
     "workloadPerJob": "Per-job results",
-    "workloadDetails": "Full technical assessment and limitations"
+    "workloadDetails": "Full technical assessment and limitations",
+    "uploadReview": "Saved · held for review, excluded from rankings"
   },
   "de": {
     "accountConnected": "Gast-Upload bereit",
@@ -432,7 +434,8 @@
     "workloadSmooth": "All measured requests meet the interactive guideline.",
     "workloadSlow": "Some requests fall below the interactive guideline, or runtime metrics are unavailable.",
     "workloadPerJob": "Per-job results",
-    "workloadDetails": "Full technical assessment and limitations"
+    "workloadDetails": "Full technical assessment and limitations",
+    "uploadReview": "Saved · held for review, excluded from rankings"
   },
   "en": {
     "accountConnected": "Guest uploads ready",
@@ -577,7 +580,8 @@
     "workloadSmooth": "All measured requests meet the interactive guideline.",
     "workloadSlow": "Some requests fall below the interactive guideline, or runtime metrics are unavailable.",
     "workloadPerJob": "Per-job results",
-    "workloadDetails": "Full technical assessment and limitations"
+    "workloadDetails": "Full technical assessment and limitations",
+    "uploadReview": "Saved · held for review, excluded from rankings"
   },
   "es": {
     "accountConnected": "Carga de invitado lista",
@@ -722,7 +726,8 @@
     "workloadSmooth": "All measured requests meet the interactive guideline.",
     "workloadSlow": "Some requests fall below the interactive guideline, or runtime metrics are unavailable.",
     "workloadPerJob": "Per-job results",
-    "workloadDetails": "Full technical assessment and limitations"
+    "workloadDetails": "Full technical assessment and limitations",
+    "uploadReview": "Saved · held for review, excluded from rankings"
   },
   "fr": {
     "accountConnected": "Envoi invité prêt",
@@ -867,7 +872,8 @@
     "workloadSmooth": "All measured requests meet the interactive guideline.",
     "workloadSlow": "Some requests fall below the interactive guideline, or runtime metrics are unavailable.",
     "workloadPerJob": "Per-job results",
-    "workloadDetails": "Full technical assessment and limitations"
+    "workloadDetails": "Full technical assessment and limitations",
+    "uploadReview": "Saved · held for review, excluded from rankings"
   },
   "hi": {
     "accountConnected": "अतिथि अपलोड तैयार",
@@ -1012,7 +1018,8 @@
     "workloadSmooth": "All measured requests meet the interactive guideline.",
     "workloadSlow": "Some requests fall below the interactive guideline, or runtime metrics are unavailable.",
     "workloadPerJob": "Per-job results",
-    "workloadDetails": "Full technical assessment and limitations"
+    "workloadDetails": "Full technical assessment and limitations",
+    "uploadReview": "Saved · held for review, excluded from rankings"
   },
   "id": {
     "accountConnected": "Unggahan tamu siap",
@@ -1157,7 +1164,8 @@
     "workloadSmooth": "All measured requests meet the interactive guideline.",
     "workloadSlow": "Some requests fall below the interactive guideline, or runtime metrics are unavailable.",
     "workloadPerJob": "Per-job results",
-    "workloadDetails": "Full technical assessment and limitations"
+    "workloadDetails": "Full technical assessment and limitations",
+    "uploadReview": "Saved · held for review, excluded from rankings"
   },
   "ja": {
     "accountConnected": "ゲストアップロード準備完了",
@@ -1302,7 +1310,8 @@
     "workloadSmooth": "All measured requests meet the interactive guideline.",
     "workloadSlow": "Some requests fall below the interactive guideline, or runtime metrics are unavailable.",
     "workloadPerJob": "Per-job results",
-    "workloadDetails": "Full technical assessment and limitations"
+    "workloadDetails": "Full technical assessment and limitations",
+    "uploadReview": "Saved · held for review, excluded from rankings"
   },
   "mr": {
     "accountConnected": "अतिथी अपलोड तयार",
@@ -1447,7 +1456,8 @@
     "workloadSmooth": "All measured requests meet the interactive guideline.",
     "workloadSlow": "Some requests fall below the interactive guideline, or runtime metrics are unavailable.",
     "workloadPerJob": "Per-job results",
-    "workloadDetails": "Full technical assessment and limitations"
+    "workloadDetails": "Full technical assessment and limitations",
+    "uploadReview": "Saved · held for review, excluded from rankings"
   },
   "pcm": {
     "accountConnected": "Guest upload don ready",
@@ -1592,7 +1602,8 @@
     "workloadSmooth": "All measured requests meet the interactive guideline.",
     "workloadSlow": "Some requests fall below the interactive guideline, or runtime metrics are unavailable.",
     "workloadPerJob": "Per-job results",
-    "workloadDetails": "Full technical assessment and limitations"
+    "workloadDetails": "Full technical assessment and limitations",
+    "uploadReview": "Saved · held for review, excluded from rankings"
   },
   "pt": {
     "accountConnected": "Envio de visitante pronto",
@@ -1737,7 +1748,8 @@
     "workloadSmooth": "All measured requests meet the interactive guideline.",
     "workloadSlow": "Some requests fall below the interactive guideline, or runtime metrics are unavailable.",
     "workloadPerJob": "Per-job results",
-    "workloadDetails": "Full technical assessment and limitations"
+    "workloadDetails": "Full technical assessment and limitations",
+    "uploadReview": "Saved · held for review, excluded from rankings"
   },
   "ru": {
     "accountConnected": "Гостевая загрузка готова",
@@ -1882,7 +1894,8 @@
     "workloadSmooth": "All measured requests meet the interactive guideline.",
     "workloadSlow": "Some requests fall below the interactive guideline, or runtime metrics are unavailable.",
     "workloadPerJob": "Per-job results",
-    "workloadDetails": "Full technical assessment and limitations"
+    "workloadDetails": "Full technical assessment and limitations",
+    "uploadReview": "Saved · held for review, excluded from rankings"
   },
   "ta": {
     "accountConnected": "விருந்தினர் பதிவேற்றம் தயார்",
@@ -2027,7 +2040,8 @@
     "workloadSmooth": "All measured requests meet the interactive guideline.",
     "workloadSlow": "Some requests fall below the interactive guideline, or runtime metrics are unavailable.",
     "workloadPerJob": "Per-job results",
-    "workloadDetails": "Full technical assessment and limitations"
+    "workloadDetails": "Full technical assessment and limitations",
+    "uploadReview": "Saved · held for review, excluded from rankings"
   },
   "te": {
     "accountConnected": "అతిథి అప్‌లోడ్ సిద్ధం",
@@ -2172,7 +2186,8 @@
     "workloadSmooth": "All measured requests meet the interactive guideline.",
     "workloadSlow": "Some requests fall below the interactive guideline, or runtime metrics are unavailable.",
     "workloadPerJob": "Per-job results",
-    "workloadDetails": "Full technical assessment and limitations"
+    "workloadDetails": "Full technical assessment and limitations",
+    "uploadReview": "Saved · held for review, excluded from rankings"
   },
   "tr": {
     "accountConnected": "Misafir yüklemesi hazır",
@@ -2317,7 +2332,8 @@
     "workloadSmooth": "All measured requests meet the interactive guideline.",
     "workloadSlow": "Some requests fall below the interactive guideline, or runtime metrics are unavailable.",
     "workloadPerJob": "Per-job results",
-    "workloadDetails": "Full technical assessment and limitations"
+    "workloadDetails": "Full technical assessment and limitations",
+    "uploadReview": "Saved · held for review, excluded from rankings"
   },
   "ur": {
     "accountConnected": "مہمان اپ لوڈ تیار",
@@ -2462,7 +2478,8 @@
     "workloadSmooth": "All measured requests meet the interactive guideline.",
     "workloadSlow": "Some requests fall below the interactive guideline, or runtime metrics are unavailable.",
     "workloadPerJob": "Per-job results",
-    "workloadDetails": "Full technical assessment and limitations"
+    "workloadDetails": "Full technical assessment and limitations",
+    "uploadReview": "Saved · held for review, excluded from rankings"
   },
   "vi": {
     "accountConnected": "Tải lên khách đã sẵn sàng",
@@ -2607,7 +2624,8 @@
     "workloadSmooth": "All measured requests meet the interactive guideline.",
     "workloadSlow": "Some requests fall below the interactive guideline, or runtime metrics are unavailable.",
     "workloadPerJob": "Per-job results",
-    "workloadDetails": "Full technical assessment and limitations"
+    "workloadDetails": "Full technical assessment and limitations",
+    "uploadReview": "Saved · held for review, excluded from rankings"
   },
   "zh-Hans": {
     "accountConnected": "访客上传已准备好",
@@ -2752,7 +2770,8 @@
     "workloadSmooth": "所有测量请求均符合交互流畅度指标。",
     "workloadSlow": "部分请求低于交互流畅度指标，或 runtime 未提供所需数据。",
     "workloadPerJob": "各个 job 结果",
-    "workloadDetails": "完整技术评语及限制"
+    "workloadDetails": "完整技术评语及限制",
+    "uploadReview": "已保存 · 待复核，不列入排行榜"
   },
   "zh-Hant": {
     "accountConnected": "訪客上傳已準備好",
@@ -2897,6 +2916,7 @@
     "workloadSmooth": "所有量度請求均符合互動流暢度指標。",
     "workloadSlow": "部分請求低於互動流暢度指標，或 runtime 未提供所需數據。",
     "workloadPerJob": "各個 job 結果",
-    "workloadDetails": "完整技術評語及限制"
+    "workloadDetails": "完整技術評語及限制",
+    "uploadReview": "已儲存 · 待覆核，不列入排行榜"
   }
 }

@@ -113,6 +113,20 @@ import UniformTypeIdentifiers
     }
     func run() {
         guard !running, validSelection else { return }
+        if !usesWorkloads || !uploads.enabled { startRun(challenge: nil); return }
+        running=true; stopping=false; phase="Preparing upload protection"; message="Requesting a one-time test challenge…"
+        let config: [String:Any] = ["workload": workload, "engine": backend,
+            "model": externalRuntime ? servedModel.trimmingCharacters(in:.whitespaces) : backend == "oMLX" ? "benchmark-model" : models[0].lastPathComponent,
+            "concurrencyLevels": workloadLevels, "repeats": repeats]
+        Task { @MainActor in
+            let ticket=await uploads.prepareChallenge(config)
+            running=false
+            if stopping { if let ticket { try? FileManager.default.removeItem(at:ticket) }; stopping=false; phase="Stopped"; return }
+            startRun(challenge: ticket)
+        }
+    }
+    private func startRun(challenge: URL?) {
+        guard !running, validSelection else { return }
         let scriptName = usesWorkloads ? "workload_runner" : usesJobs ? "jobs_runner" : "runner"
         guard let script = Bundle.main.url(forResource: scriptName, withExtension: "py") ?? Bundle.module.url(forResource: scriptName, withExtension: "py") else { message = "找不到測試程式，請重新安裝 app。"; return }
         guard FileManager.default.isExecutableFile(atPath: python), (externalRuntime || FileManager.default.isExecutableFile(atPath: backend == "oMLX" ? omlx : server)) else { phase = "需要設定"; message = "未找到 Python 或 llama-server。請在設定選擇可執行檔。"; return }
@@ -127,6 +141,7 @@ import UniformTypeIdentifiers
             } else if usesJobs {
                 process.arguments = ["-B", "-u", script.path, "--engine", backend, "--server", backend == "oMLX" ? omlx : server, "--model", backend == "oMLX" ? mlxModel!.path : models[0].path, "--jobs", String(concurrentJobs), "--output", destination.path]
             } else { process.arguments = ["-B", "-u", script.path] + (trial ? ["--trial"] : []) + ["--server", server, "--output", destination.path, "--models"] + models.map(\.path) }
+            if let challenge, usesWorkloads { process.arguments! += ["--challenge", challenge.path] }
             // Keys travel over stdin, never argv, report JSON or runtime logs.
             let input = Pipe(); process.standardInput = input
 
@@ -152,6 +167,7 @@ import UniformTypeIdentifiers
                     if pending.count > 1_000_000 { diagnostic = "Runtime 輸出過長。"; pending.removeAll(keepingCapacity: false) }
                 }
                 process.waitUntilExit()
+                if let challenge { try? FileManager.default.removeItem(at:challenge) }
                 let detail = String((diagnostic + String(decoding: pending, as: UTF8.self)).suffix(4000)).trimmingCharacters(in: .whitespacesAndNewlines)
                 DispatchQueue.main.async {
                     guard let self, self.runToken == token else { return }
@@ -201,6 +217,7 @@ import UniformTypeIdentifiers
         }
     }
     func cancel() {
+        if running && task == nil { stopping=true; phase="Stopping…"; return }
         guard let task, task.isRunning, !stopping else { return }
         stopping = true; phase = "正在停止"; message = "等待模型程序關閉…"; task.terminate()
     }

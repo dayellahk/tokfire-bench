@@ -23,6 +23,9 @@ from jobs_runner import launch, workspace, stop_all, preflight
 from omlx_runner import model_manifest
 from platform_support import windows_hardware
 from pro_license import authorize
+import run_challenge
+CHALLENGE = None
+
 from workload_core import VERSION, SPEC, PROFILES, fingerprint, levels, AgentTools, assessment
 
 CANCEL = threading.Event()
@@ -193,8 +196,8 @@ def stream(base, engine, model, messages, max_tokens, context, timeout=180):
 
 def measure_job(base, engine, model, profile, context, count, repeat, job, barrier=None, timeout=180):
     if barrier: barrier.wait(timeout=30)
-    start = time.perf_counter(); requests = []; agent = AgentTools(); tool_ms = 0.0; error = None; status = 'complete'
-    messages = [{'role':'user', 'content':f'Run ID: {uuid.uuid4()}\n' + PROFILES[profile]['prompt']}]
+    start = time.perf_counter(); requests = []; agent = AgentTools(CHALLENGE['nonce'] if CHALLENGE else None); tool_ms = 0.0; error = None; status = 'complete'
+    messages = [{'role':'user', 'content':f'Run ID: {run_challenge.request_id(CHALLENGE, count, repeat, job)}\n' + PROFILES[profile]['prompt']}]
     try:
         for step in range(5 if profile == 'agent-tools' else 1):
             metrics, content = stream(base, engine, model, messages, PROFILES[profile]['maxOutputTokens'], context, timeout)
@@ -230,11 +233,15 @@ def round_jobs(base, engine, model, profile, context, count, repeat, timeout):
     return rows, {'concurrency':count,'repeat':repeat,'wallMs':elapsed,'aggregateTps':tokens/(elapsed/1000)}
 
 def run(options):
+    global CHALLENGE
     counts = levels(options.jobs, options.sweep)
     key = sys.stdin.readline(4096).strip() if options.jobs>3 else None
     try: authorize(options.jobs,key)
     except ValueError:
         emit('license',valid=False); raise
+    config = {'workload': options.workload, 'engine': options.engine, 'model': options.model if options.endpoint else ('benchmark-model' if options.engine == 'oMLX' else Path(options.model).name), 'concurrencyLevels': counts, 'repeats': options.repeats}
+    CHALLENGE = run_challenge.load_ticket(getattr(options, 'challenge', None), config)
+    emit('progress', phase='integrity', message='Server challenge active; hardware remains self-reported.' if CHALLENGE else 'No server challenge: offline / community-unverified run.')
     profile = PROFILES[options.workload]; context = profile['contextTokens']
     hw = detect_hardware(); emit('hardware',hardware=hw)
     if options.engine == 'oMLX' and hw['platform'] != 'macOS': raise ValueError('oMLX requires Apple Silicon macOS.')
@@ -275,7 +282,7 @@ def run(options):
                     samples += rows; groups.append(group)
     finally:
         emit('progress',phase='cleanup',message='Closing benchmark-owned processes'); stop_all()
-    report = {'specVersion':SPEC,'runnerVersion':VERSION,'runId':str(uuid.uuid4()),
+    report = {'specVersion':SPEC,'runnerVersion':VERSION,'runId':CHALLENGE['runId'] if CHALLENGE else str(uuid.uuid4()),
               'measuredAt':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()), 'hardware':hw,
               'runtime':{'name':options.engine,'binarySha256':binary_hash,'management':'external-loopback' if options.endpoint else 'managed',
                          'identity':'unverified-server-model-id' if options.endpoint else 'local-file-sha256',
@@ -287,6 +294,7 @@ def run(options):
                           'inferenceLocation':'same-device','hardwareRole':'inference-host','timeoutSeconds':options.timeout},
               'models':[{'modelName':clean(model,200),'modelSha256':model_hash,'loadMs':load_ms,'samples':sorted(samples,key=lambda r:(r['concurrency'],r['repeat'],r['jobId']))}],
               'groups':groups,'telemetry':{'before':before,'after':battery_snapshot(),'energyJoules':None,'peakGpuMemoryBytes':None}}
+    if CHALLENGE: report['challenge'] = run_challenge.evidence(CHALLENGE)
     output = Path(options.output); atomic_json(output,report)
     output.with_suffix('.md').write_text(assessment(report),encoding='utf-8')
     emit('complete',message=f'Workload benchmark complete: {len(samples)} jobs measured',output=str(output))
@@ -294,6 +302,7 @@ def run(options):
 def parser():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--engine',choices=['llama.cpp','oMLX','Ollama','vLLM'],required=True)
+    p.add_argument('--challenge', help='Server ticket JSON obtained before the run in the same guest session used to upload')
     p.add_argument('--server'); p.add_argument('--endpoint'); p.add_argument('--model',required=True)
     p.add_argument('--workload',choices=list(PROFILES),default='short-chat')
     p.add_argument('--jobs',type=int,choices=range(1,21),default=1); p.add_argument('--sweep',action='store_true')

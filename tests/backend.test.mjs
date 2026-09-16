@@ -98,3 +98,10 @@ test('one-token runtime timing boundary tolerates machine rounding, not extra mi
   s.decodeTps=(s.outputTokens-2)*1000/s.decodeMs;
   assert.equal(reportSchema.safeParse(r).success,false);
 });
+
+test('legacy extreme throughput stays out of rankings even with publication consent',async()=>{
+ const db=database(),r=report();r.models[0].samples[0].decodeTps=50000;r.models[0].samples[0].decodeMs=128/50000*1000;
+ const saved=await saveSubmission(db,'owner',payload(r,true));assert.equal(saved.status,'quarantined');assert.equal(saved.published,false);
+ assert.equal((await leaderboard(db)).results.length,0);
+ await publication(db,'owner',saved.id,true,CONSENT_VERSION);assert.equal((await leaderboard(db)).results.length,0);db.sql.close();
+});

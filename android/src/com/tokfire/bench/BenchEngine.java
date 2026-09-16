@@ -9,6 +9,8 @@ import java.util.concurrent.*;
 
 /** Native HTTP benchmark engine. No dynamic tools, generated code or file execution. */
 public final class BenchEngine {
+ public JSONObject challenge=null;
+ String requestID(int count,int repeat,int job)throws JSONException{return challenge==null?UUID.randomUUID().toString():challenge.getString("nonce")+":"+challenge.getString("runId")+":"+count+":"+repeat+":"+job;}
  public interface Progress { void update(String message, int completed); }
  public volatile boolean stopped;
  private final Set<HttpURLConnection> connections=ConcurrentHashMap.newKeySet();
@@ -66,7 +68,8 @@ public final class BenchEngine {
  static String boundedLine(Reader r)throws IOException{StringBuilder b=new StringBuilder();int ch;while((ch=r.read())!=-1){if(ch=='\n')return b.toString();if(ch!='\r')b.append((char)ch);if(b.length()>1_048_576)throw new IOException("response-too-large");}return b.length()==0?null:b.toString();}
  JSONObject job(URI base,String engine,String model,JSONObject profile,String id,int count,int repeat,int job,CyclicBarrier barrier)throws Exception{
   if(barrier!=null)barrier.await(30,TimeUnit.SECONDS);double start=now(),toolMs=0;JSONArray requests=new JSONArray();String status="complete",error=null;int stage=0,calls=0,errors=0;
-  JSONArray messages=new JSONArray().put(obj("role","user","content","Run ID: "+UUID.randomUUID()+"\n"+profile.getString("prompt")));
+  int[] totals={258,249,267};if(challenge!=null){String nonce=challenge.getString("nonce");totals=new int[]{2*(100+Integer.parseInt(nonce.substring(0,2),16)),200+Integer.parseInt(nonce.substring(2,4),16),3*(70+Integer.parseInt(nonce.substring(4,6),16))};}int total=totals[0]+totals[1]+totals[2];
+  JSONArray messages=new JSONArray().put(obj("role","user","content","Run ID: "+requestID(count,repeat,job)+"\n"+profile.getString("prompt")));
   try{
    for(int step=0;step<(id.equals("agent-tools")?5:1);step++){
     Reply reply=stream(base,engine,model,messages,profile.getInt("maxOutputTokens"),profile.getInt("contextTokens"));requests.put(reply.metrics);
@@ -74,10 +77,10 @@ public final class BenchEngine {
     double toolStart=now();JSONObject result=null;
     try{
      JSONObject action=new JSONObject(reply.text.trim());
-     if(action.length()==1&&action.has("answer")){status=stage==2&&action.opt("answer") instanceof Number&&action.getDouble("answer")==774?"complete":stage>0?"partial":"failure";toolMs+=now()-toolStart;break;}
+     if(action.length()==1&&action.has("answer")){status=stage==2&&action.opt("answer") instanceof Number&&action.getDouble("answer")==total?"complete":stage>0?"partial":"failure";toolMs+=now()-toolStart;break;}
      calls++;JSONObject args=action.getJSONObject("arguments");String name=action.getString("tool");if(action.length()!=2)throw new JSONException("extra keys");
-     if(stage==0&&name.equals("lookup")&&args.length()==1&&args.optString("table").equals("orders")){stage=1;result=new JSONObject("{\"records\":[{\"quantity\":2,\"unit_price\":129},{\"quantity\":1,\"unit_price\":249},{\"quantity\":3,\"unit_price\":89}]}");}
-     else if(stage==1&&name.equals("sum")&&args.length()==1){JSONArray values=args.getJSONArray("values");if(values.length()!=3||!(values.get(0) instanceof Number)||!(values.get(1) instanceof Number)||!(values.get(2) instanceof Number)||values.getDouble(0)!=258||values.getDouble(1)!=249||values.getDouble(2)!=267)throw new JSONException("wrong totals");stage=2;result=obj("total",774);}
+     if(stage==0&&name.equals("lookup")&&args.length()==1&&args.optString("table").equals("orders")){stage=1;result=obj("records",new JSONArray().put(obj("quantity",2,"unit_price",totals[0]/2)).put(obj("quantity",1,"unit_price",totals[1])).put(obj("quantity",3,"unit_price",totals[2]/3)));}
+     else if(stage==1&&name.equals("sum")&&args.length()==1){JSONArray values=args.getJSONArray("values");if(values.length()!=3||!(values.get(0) instanceof Number)||!(values.get(1) instanceof Number)||!(values.get(2) instanceof Number)||values.getDouble(0)!=totals[0]||values.getDouble(1)!=totals[1]||values.getDouble(2)!=totals[2])throw new JSONException("wrong totals");stage=2;result=obj("total",total);}
      else throw new JSONException("invalid tool");
     }catch(JSONException ex){errors++;status=stage>0?"partial":"failure";toolMs+=now()-toolStart;break;}
     toolMs+=now()-toolStart;messages.put(obj("role","assistant","content",reply.text)).put(obj("role","user","content","Tool result: "+result+". Return the next JSON action or final answer."));if(step==4)status=stage>0?"partial":"failure";
@@ -102,11 +105,15 @@ public final class BenchEngine {
     double elapsed=now()-start;groups.put(obj("concurrency",count,"repeat",repeat,"wallMs",elapsed,"aggregateTps",tokens/(elapsed/1000)));
    }
   }
-  return obj("specVersion","tokfire-workloads-v1","runnerVersion","0.7.0","runId",UUID.randomUUID().toString(),"measuredAt",java.time.Instant.now().toString(),"hardware",hardware,
+  JSONObject report=obj("specVersion","tokfire-workloads-v1","runnerVersion","0.7.0","runId",challenge==null?UUID.randomUUID().toString():challenge.getString("runId"),"measuredAt",java.time.Instant.now().toString(),"hardware",hardware,
    "runtime",obj("name",engine,"binarySha256",null,"management",remote?"external-network":"external-loopback","identity","unverified-server-model-id","gpuLayersRequested",null),
    "settings",obj("workload",workload,"workloadSha256",profile.getString("sha256"),"concurrencyLevels",levels,"repeats",repeats,"maxOutputTokens",profile.getInt("maxOutputTokens"),"contextTokens",profile.getInt("contextTokens"),"warmups",1,"temperature",0,"cachePolicy","unique-prefix; report observed cache counts","targetTps",new JSONArray("[100,200]"),"timing","runtime decode/prefill; client first output and wall time","inferenceLocation",remote?"remote-server":"same-device","hardwareRole",remote?"request-client":"inference-host","timeoutSeconds",180),
    "models",new JSONArray().put(obj("modelName",model,"modelSha256",null,"loadMs",null,"samples",samples)),"groups",groups,
    "telemetry",obj("before",before,"after",before,"energyJoules",null,"peakGpuMemoryBytes",null));
+  if(challenge!=null){StringBuilder ids=new StringBuilder();for(int n=0;n<levels.length();n++)for(int r=1;r<=repeats;r++)for(int j=1;j<=levels.getInt(n);j++){if(ids.length()>0)ids.append('\n');ids.append(requestID(levels.getInt(n),r,j));}
+   byte[] hash=java.security.MessageDigest.getInstance("SHA-256").digest(ids.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));StringBuilder hex=new StringBuilder();for(byte b:hash)hex.append(String.format(java.util.Locale.ROOT,"%02x",b&255));
+   report.put("challenge",obj("id",challenge.getString("id"),"nonce",challenge.getString("nonce"),"requestDigest",hex.toString()));}
+  return report;
  }
  public static String assess(JSONObject report)throws Exception{
   StringBuilder out=new StringBuilder("TokFire Bench 0.7 — "+report.getJSONObject("settings").getString("workload")+"\n\n");JSONArray rows=report.getJSONArray("models").getJSONObject(0).getJSONArray("samples"),levels=report.getJSONObject("settings").getJSONArray("concurrencyLevels");

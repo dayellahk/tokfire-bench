@@ -21,7 +21,7 @@ internal sealed class AccountView:UserControl {
    view.CoreWebView2.Navigate(SiteOrigin+"/native-connect");
   }catch(Exception){notice.Text="Microsoft Edge WebView2 Runtime is required for account sign-in. Install it from Microsoft's WebView2 download page. Your local reports are safe.";throw;}
  }
- public async Task Upload(string payload){
+ public async Task<JsonNode?> Post(string path,string payload){
   if(!ready)await Connect();
   var connected=false;
   for(var i=0;i<200;i++){if(await view.CoreWebView2.ExecuteScriptAsync("location.origin==='https://tokfires.com' && !!document.querySelector('[data-native-ready=\"true\"]')")=="true"){connected=true;break;}await Task.Delay(100);}
@@ -30,9 +30,12 @@ internal sealed class AccountView:UserControl {
   var jar=new CookieContainer();foreach(var c in cookies){var cookie=new Cookie(c.Name,c.Value,c.Path,c.Domain){Secure=c.IsSecure,HttpOnly=c.IsHttpOnly};jar.Add(cookie);}
   using var handler=new HttpClientHandler{CookieContainer=jar,AllowAutoRedirect=false};using var client=new HttpClient(handler){Timeout=TimeSpan.FromSeconds(30)};
   client.DefaultRequestHeaders.Add("Origin",SiteOrigin);
-  using var response=await client.PostAsync(SiteOrigin+"/api/v2/submissions",new StringContent(payload,Encoding.UTF8,"application/json"));
+  using var response=await client.PostAsync(SiteOrigin+path,new StringContent(payload,Encoding.UTF8,"application/json"));
   if(response.StatusCode==HttpStatusCode.Unauthorized)throw new InvalidOperationException("Reopen the upload manager, then retry queued uploads.");
   if(!response.IsSuccessStatusCode)throw new InvalidOperationException($"Upload returned {(int)response.StatusCode}. The local report remains queued.");
-  var result=JsonNode.Parse(await response.Content.ReadAsStringAsync());if(result?["stored"]?.GetValue<bool>()!=true)throw new InvalidOperationException("Upload was not acknowledged. The report remains queued.");
+  return JsonNode.Parse(await response.Content.ReadAsStringAsync());
  }
+ public async Task<bool> Upload(string payload){var result=await Post("/api/v2/submissions",payload);if(result?["stored"]?.GetValue<bool>()!=true)throw new InvalidOperationException("Upload was not acknowledged. The report remains queued.");return result?["status"]?.GetValue<string>()=="quarantined";}
+ public async Task<string?> Challenge(JsonObject config){try{var ticket=await Post("/api/v2/challenges",config.ToJsonString());if(ticket?["id"] is null)return null;var path=Path.Combine(Path.GetTempPath(),"tokfire-challenge-"+Guid.NewGuid()+".json");await File.WriteAllTextAsync(path,ticket.ToJsonString());return path;}catch{return null;}}
+
 }
