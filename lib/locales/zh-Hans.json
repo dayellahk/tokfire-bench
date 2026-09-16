@@ -534,5 +534,10 @@
   "Google sign-in could not be completed. Please try again or use your email and password.": "未能完成 Google 登录。请重试或使用邮箱及密码登录。",
   "Optional Google sign-in": "可选 Google 登录",
   "When you choose Google sign-in, TokFire Labs stores your Google account identifier, name, email and profile picture to create and authenticate your account. These details are not included in public benchmark results. We do not request access to Gmail or Google Drive.": "当你选择 Google 登录，TokFire Labs 会保存你的 Google 账号标识、姓名、邮箱及头像，用于创建账号及验证登录。这些资料不会出现在公开测试结果。我们不会请求访问 Gmail 或 Google Drive。",
-  "Signing in does not transfer your guest reports. Sign out in the same browser to manage those reports again. To request account deletion, contact the support email shown on the Google consent screen.": "登录不会转移你的访客报告。如需再次管理这些报告，请在同一浏览器退出登录。如需删除账号，请联系 Google 同意页面所列的支持邮箱。"
+  "Signing in does not transfer your guest reports. Sign out in the same browser to manage those reports again. To request account deletion, contact the support email shown on the Google consent screen.": "登录不会转移你的访客报告。如需再次管理这些报告，请在同一浏览器退出登录。如需删除账号，请联系 Google 同意页面所列的支持邮箱。",
+  "Blogs & tutorials": "文章与教程",
+  "LEARN / BUILD / MEASURE": "学习／创建／测量",
+  "Make local AI part of your day.": "让本地 AI 融入日常。",
+  "Six practical guides: your first assistant, private document Q&A, Mac MLX, GPU memory, tool agents and concurrent jobs.": "六篇实用教程：第一个助手、私人文档问答、Mac MLX、GPU 内存、工具 agent 及并发 job。",
+  "Explore the guides": "探索实用指南"
 }

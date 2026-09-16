@@ -142,7 +142,7 @@ export default function Home() {const locale=useLocale();
         })}
         <a className="text-link" href="/signin-with-chatgpt?return_to=/" target="_top">Optional account sign-in</a>
       </section>}
-      <footer className="brand-footer"><b>TokFire Bench</b><span>Built by TokFire Labs · tokfires.com</span><span>Local models. Measured performance.</span></footer>
+      <footer className="brand-footer"><b>TokFire Bench</b><span>Built by TokFire Labs · tokfires.com</span><a href="/blog">Blogs &amp; tutorials</a><span>Local models. Measured performance.</span></footer>
     </section>
   </main>,locale);
 }

@@ -11,9 +11,9 @@ for(const [lang,prefix,heading] of [['en','','Big intelligence.'],['zh-Hant','/z
   if(page==='/signin'||page==='/native-connect')assert(/name="robots" content="[^"]*noindex/.test(html),`${url}: private route noindex`);
  }
 }
-const sitemap=await fetch(origin+'/sitemap.xml');assert.equal(sitemap.status,200);assert((sitemap.headers.get('content-type')||'').includes('xml'));const xml=await sitemap.text();assert.equal((xml.match(/<loc>/g)||[]).length,6);assert(xml.includes('hreflang="zh-Hant"'));assert(!xml.includes('/signin'));
+const sitemap=await fetch(origin+'/sitemap.xml');assert.equal(sitemap.status,200);assert((sitemap.headers.get('content-type')||'').includes('xml'));const xml=await sitemap.text();assert.equal((xml.match(/<loc>/g)||[]).length,27);assert(xml.includes('hreflang="zh-Hant"'));assert(!xml.includes('/signin'));
 const robots=await fetch(origin+'/robots.txt');assert.equal(robots.status,200);const text=await robots.text();assert(text.includes('Sitemap: '+origin+'/sitemap.xml'));assert(text.includes('Disallow: /api/'));
 for(const route of ['/references','/zh-Hant/references','/zh-Hans/references','/api/v1/references'])assert.equal((await fetch(origin+route)).status,404,route);
 assert(!xml.includes('/references'));
 const invalid=await fetch(origin+'/zh-Hant/not-a-page');assert.equal(invalid.status,404);
-console.log('PASS: 12 translated routes, document languages, canonical/hreflang, private noindex, 6 sitemap URLs, robots and 404');
+console.log('PASS: 12 translated routes, document languages, canonical/hreflang, private noindex, 27 sitemap URLs, robots and 404');
