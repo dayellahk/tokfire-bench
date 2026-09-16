@@ -4,9 +4,9 @@ Project: `tokfire-bench`, account `162a5d58acddc4d87c0fd46565bc67d4`.
 URL: https://tokfire-bench.pages.dev
 Primary application: https://tokfires.com (Linode + MySQL).
 
-`node deploy/build-static.mjs` exports the live English, Traditional Chinese and Simplified Chinese home and methodology pages into `dist/cloudflare-static`. It copies their public CSS/favicon, removes Next.js hydration scripts and account/upload forms, and converts comparison/account actions to explicit main-portal links. The static site is visibly labelled. No credentials, private reports, database copy or user session are exported.
+`node deploy/build-static.mjs` exports the live English, Traditional Chinese and Simplified Chinese home and methodology pages into `dist/cloudflare-static`. It copies their public CSS, favicon and landing images, removes Next.js hydration scripts and account/upload forms, and converts comparison/account actions to explicit main-portal links. The static site is visibly labelled. No credentials, private reports, database copy or user session are exported.
 
-Reference-library and sign-in URLs redirect to the matching language on the live portal. Installers download from the primary site. Canonical URLs, language alternates and the copied sitemap point to the primary site to keep its search identity.
+Sign-in and native-connect URLs redirect to the matching language on the live portal. Installers download from the primary site. Canonical URLs, language alternates and the copied sitemap point to the primary site to keep its search identity.
 
 After deploying and checking the primary site:
 

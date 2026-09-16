@@ -4,7 +4,8 @@ import {localizeTree} from '@/lib/i18n';
 import {useLocale} from '@/components/language-switcher';
 
 import { useEffect, useState } from 'react';
-import { Activity, Flame, ArrowRight, Check, Cpu, Database, Download, FileUp, Gauge, LockKeyhole, ShieldCheck, Trash2, Trophy } from 'lucide-react';
+import { Activity, Flame, Check, Cpu, Database, FileUp, Gauge, LockKeyhole, ShieldCheck, Trash2, Trophy } from 'lucide-react';
+import {LandingNav,LandingPage} from '@/components/landing-page';
 import {ComparisonData} from '@/components/comparison-data';
 import {AccountMenu} from '@/components/account-menu';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,6 @@ import { BenchmarkReport, CONSENT_VERSION, MAX_REPORT_BYTES, reportSchema, summa
 import {workloadSchema,workloadSummary,type WorkloadReport} from '@/lib/workloads';
 
 type Tab = 'benchmark' | 'rankings' | 'privacy';
-type Ranking = {cohort:string; modelHash:string; inputTokens:number; chip:string; machine:string; cpuCores:number; memoryBytes:number; osVersion:string; runtimeHash:string; decodeTps:number; ttftMs:number; prefillTps:number; runs:number; contributors:number};
 type Submission = {id:string;runId:string;collectedAt:number;isPublic:number;reportJson:string;integrityStatus:string;integrityReasons:string|null};
 const gb=(n:number)=>`${(n/2**30).toFixed(1)} GiB`;
 const fmt=(n:number)=>n.toLocaleString(undefined,{maximumFractionDigits:1});
@@ -32,24 +32,18 @@ export default function Home() {const locale=useLocale();
   const [collect,setCollect]=useState(false),[publish,setPublish]=useState(false);
   const [busy,setBusy]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState('');
   const [submitted,setSubmitted]=useState(false);
-  const [rankings,setRankings]=useState<Ranking[]>([]),[cohort,setCohort]=useState('');
   const [mine,setMine]=useState<Submission[]>([]),[loading,setLoading]=useState(false);
   const [deleteId,setDeleteId]=useState<string|null>(null);
   const rows=report?summarize(report):[];
   const shortRows=rows.filter(r=>r.inputTokens===512).sort((a,b)=>b.decodeTps-a.decodeTps);
   const best=shortRows[0];
-  const cohorts=Array.from(new Map(rankings.map(r=>[r.cohort,r])).values());
-  const selectedCohort=cohorts.some(r=>r.cohort===cohort)?cohort:cohorts[0]?.cohort;
-  const visible=rankings.filter(r=>r.cohort===selectedCohort).sort((a,b)=>b.decodeTps-a.decodeTps);
 
   useEffect(()=>{const frame=requestAnimationFrame(()=>{const requested=new URLSearchParams(location.search).get('tab');if(requested==='rankings'||requested==='privacy'){setLoading(true);setTab(requested);}});return ()=>cancelAnimationFrame(frame);},[]);
 
   useEffect(()=>{
-    if(tab==='benchmark') return;
+    if(tab!=='privacy') return;
     let cancelled=false;
-    const request = tab==='rankings'
-      ? api<{results:Ranking[]}>('/api/v1/leaderboard').then(data=>{if(!cancelled)setRankings(data.results);})
-      : api<{results:Submission[]}>('/api/v1/submissions').then(data=>{if(!cancelled)setMine(data.results);});
+    const request = api<{results:Submission[]}>('/api/v1/submissions').then(data=>{if(!cancelled)setMine(data.results);});
     request.catch(e=>{if(!cancelled)setError(e.message);}).finally(()=>{if(!cancelled)setLoading(false);});
     return ()=>{cancelled=true;};
   },[tab]);
@@ -89,9 +83,10 @@ export default function Home() {const locale=useLocale();
     } catch(e) {setError(e instanceof Error?e.message:'Update failed');} finally {setBusy(false);}
   }
 
-  return localizeTree(<main className="app-shell">
+  return localizeTree(<main className={tab==='benchmark'?'app-shell marketing-shell':'app-shell'}>
+    {tab==='benchmark'&&<LandingNav/>}
     <aside className="sidebar">
-      <div className="brand"><div className="brand-mark"><Flame size={21}/></div><div><b>TokFire</b><span>TOKFIRE BENCH</span></div></div>
+      <a href="/" className="brand"><div className="brand-mark"><Flame size={21}/></div><div><b>TokFire</b><span>TOKFIRE BENCH</span></div></a>
       <nav aria-label="Primary navigation">{([['benchmark','Benchmark',Gauge],['rankings','Comparisons',Trophy],['privacy','My data',ShieldCheck]] as const).map(([id,label,Icon])=><button key={id} aria-label={label} aria-current={tab===id?'page':undefined} className={tab===id?'active':''} onClick={()=>{if(id===tab)return;setTab(id);history.replaceState(null,'',location.pathname+(id==='benchmark'?'':'?tab='+id));setLoading(id!=='benchmark');setError('');setMessage('');}}><Icon/>{label}</button>)}</nav>
       <div className="device-mini"><LockKeyhole size={14}/> LOCAL FIRST<div>Developer alpha</div><small>Measured on your device</small></div>
       <div className="side-foot"><span>TokFire Labs</span><b>tokfires.com</b></div>
@@ -101,20 +96,8 @@ export default function Home() {const locale=useLocale();
       {error&&<div role="alert" className="notice error">{error}</div>}
       {message&&<div role="status" className="notice">{message}</div>}
       {tab==='benchmark'&&<>
-        <div className="intro"><div><div className="kicker">TOKFIRE BENCH / BY TOKFIRE LABS</div><h1>Know your model.<br/><em>Know your machine.</em></h1><p>Benchmark GGUF or MLX models, choose 1–3 concurrent jobs calling one model, and upload results without signing in.</p></div><div className="score-ring"><Cpu size={30}/><b>{'1–3'}</b><small>FREE CONCURRENT JOBS</small></div></div>
-        <div className="notice subtle">Tests run in the desktop app. Public comparisons show TokFire reports shared with permission. TokFire Bench has been tested on an M2 Max; the developer DMG is ad-hoc signed and not notarized. Windows x64 is an unsigned preview; native Windows and GPU validation are still pending.</div>
-        <div className="workspace-grid">
-          <section className="panel setup-panel"><div className="panel-head"><div><span>01 / ON YOUR DEVICE</span><h2>Run a reproducible test</h2></div><Cpu/></div>
-            <ol className="steps"><li><b>Install the desktop app</b><p>Mac: download the DMG and drag to Applications. Windows: extract the ZIP and open TokFire Bench.exe. Install Python and llama.cpp separately; MLX/oMLX is Mac-only. Windows account sign-in also requires WebView2.</p></li><li><b>Choose GGUF or MLX</b><p>Choose one model and select 1, 2 or 3 simultaneous jobs before Run. Both llama.cpp and oMLX show live progress and per-job results. TokFire Bench Pro unlocks up to 20 jobs on the same model. HK$180 once, one activated device. Paid release coming after store approval.</p></li><li><b>Run and upload as a guest</b><p>Automatic upload is enabled before Run; public sharing is separate and off by default. Offline or failed uploads remain queued. JSON and readable commentary are always saved locally.</p></li></ol>
-            <a className="download-link" href="/TokFireBench-0.7.0-macos-arm64.dmg" download><Download size={17}/>Download macOS DMG · 0.7.0<ArrowRight size={16}/></a><a className="download-link" href="/tokfire-bench-source.zip" download><Download size={17}/>Download macOS source<ArrowRight size={16}/></a>
-            <a className="download-link" href="/TokFireBench-0.7.0-windows-x64.zip" download><Download size={17}/>Windows x64 ZIP · 0.7.0 Preview<ArrowRight size={16}/></a><p className="fine-print">Windows 10/11 Intel or AMD 64-bit. Extract the entire ZIP. Core controls offer 20 languages; Windows-specific guidance and reports are currently in English. This preview has been cross-compiled and unit-tested on macOS; Windows runtime testing is pending.</p>
-            <a className="download-link" href="/TokFireBench-0.7.0-android-preview.apk" download><Download size={17}/>Android APK · 0.7.0 Preview<ArrowRight size={16}/></a>
-            <a className="download-link" href="/TokFireBench-0.7.0-cli.tar.gz" download><Download size={17}/>Linux / cross-platform CLI · 0.7.0<ArrowRight size={16}/></a>
-            <p className="fine-print">Android is a native benchmark client for an existing on-device runtime or a selected LAN server. Model weights and an inference engine are not bundled. Remote results are labelled separately. Development signing; physical-phone validation is pending.</p>
-            <p className="fine-print">New in 0.7: fixed chat, business, long-document and local agent-tool workloads; 3–5 repeats, concurrency sweeps, failure rates and P95/P99. The agent fixture is not a Hermes/OpenClaw integration.</p>
-            <div className="fine-print"><b>Start small: MiniCPM5-2B trial</b><p>The download includes a trial launcher. In the extracted native folder, run <code>python3 trial-minicpm.py</code>. It downloads the official Q4_K_M model (~1.56 GB), verifies its checksum, and measures one short run on your Mac. Requires Python and llama-server; no Xcode build is needed for the command-line trial. The CLI trial stays local; trials run in the app follow its upload setting. The full benchmark also supports one model, or up to three in sequence.</p></div>
-            <a className="text-link" href="/methodology">Read the methodology & limitations</a><a className="text-link" href="/native-connect">Connect the desktop app →</a>
-          </section>
+        <LandingPage/>
+        <div className="landing-review" id="review">
           <aside className="panel run-panel"><span className="panel-index">02 / REVIEW</span><h2>Bring your results.</h2><p>Review standard GGUF or 0.7 workload reports locally, then choose whether to upload. Workload results remain separate from legacy synthetic rankings.</p>
             <label className="file-picker"><FileUp size={22}/><b>Choose a benchmark report</b><small>JSON · up to 1.5 MB (workload reports)</small><input type="file" accept="application/json,.json" disabled={busy} onChange={e=>{void importFile(e.target.files?.[0]);e.target.value='';}}/></label>
             <div className="run-note"><LockKeyhole size={15}/><span>Choosing a file does not send it to the server.</span></div>
@@ -147,13 +130,7 @@ export default function Home() {const locale=useLocale();
       </>}
       {tab==='rankings'&&<section className="page-section"><div className="kicker">COMMUNITY / OPT-IN RESULTS</div><div className="section-title"><div><h1>Find your workload fit.</h1><p>Match hardware and models to chat, single tool tasks or parallel tool workflows. See what was measured before choosing your setup.</p></div></div>
         <ComparisonData/>
-        <details className="fit-legacy"><summary>Legacy exact-token comparisons</summary>
-        {loading?<p role="status">Loading measurements…</p>:!rankings.length?<p>No public legacy benchmark reports yet. Workload reports appear above.</p>:<>
-          <label className="cohort-picker">Choose a comparison group<select value={selectedCohort} onChange={e=>setCohort(e.target.value)}>{cohorts.map(r=><option key={r.cohort} value={r.cohort}>{r.modelHash.slice(0,10)} · {r.inputTokens} input · runtime {r.runtimeHash.slice(0,8)} · group {r.cohort.slice(0,6)}</option>)}</select></label>
-          <div className="table-scroll"><table><thead><tr><th>Hardware</th><th>Memory</th><th>macOS</th><th>Decode</th><th>TTFT</th><th>Prefill</th><th>Runs / contributors</th></tr></thead><tbody>{visible.map((r,i)=><tr key={i}><td><b>{r.chip}</b><small>{r.machine} · {r.cpuCores} CPU cores</small></td><td>{gb(r.memoryBytes)}</td><td>{r.osVersion}</td><td>{fmt(r.decodeTps)} tok/s</td><td>{fmt(r.ttftMs)} ms</td><td>{fmt(r.prefillTps)} tok/s</td><td>{r.runs} / {r.contributors}</td></tr>)}</tbody></table></div>
-          <p className="fine-print">Mean of per-report medians, grouped by exact hardware, OS and comparison group. The first 500 groups are shown. Repeated reports can bias averages; contributor counts are shown. This alpha has no anti-cheat attestation or official overall score.</p>
-        </>}
-        </details><div className="method-note"><ShieldCheck/><div><b>Measured evidence before a global score</b><p>There is no verified reference fleet yet. We will calibrate hardware predictions and a fixed standard suite before publishing an overall AI score.</p></div></div>
+        <div className="method-note"><ShieldCheck/><div><b>Measured evidence before a global score</b><p>There is no verified reference fleet yet. We will calibrate hardware predictions and a fixed standard suite before publishing an overall AI score.</p></div></div>
       </section>}
       {tab==='privacy'&&<section className="page-section privacy-page"><div className="kicker">YOUR DATA / YOUR CHOICE</div><h1>Private by default.</h1><p className="lead">Collection and publication are separate choices. You can hide a contribution or delete the stored report.</p>
         <p>Deleting a report removes its measurements. Minimal run IDs and one-way digests remain to prevent replay. Temporary abuse counters and expired ticket details are cleaned up on subsequent requests.</p>

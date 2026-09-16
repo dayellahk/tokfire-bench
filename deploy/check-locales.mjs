@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 const origin=process.env.TEST_ORIGIN??'https://tokfires.com';
-for(const [lang,prefix,heading] of [['en','','Know your model.'],['zh-Hant','/zh-Hant','了解你的模型。'],['zh-Hans','/zh-Hans','了解你的模型。']]){
+for(const [lang,prefix,heading] of [['en','','Big intelligence.'],['zh-Hant','/zh-Hant','強大智能，'],['zh-Hans','/zh-Hans','强大智能，']]){
  for(const page of ['','/methodology','/signin','/native-connect']){
   const url=origin+(prefix+page||'/');const response=await fetch(url);assert.equal(response.status,200,url);
   const html=(await response.text()).replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'');

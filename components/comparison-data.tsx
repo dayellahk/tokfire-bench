@@ -1,6 +1,8 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import Link from 'next/link';
+import {PublicArchive} from './public-archive';
+import {HardwarePicks} from './hardware-picks';
 import {Activity,ArrowUpRight,FileJson,Search} from 'lucide-react';
 import {localizeTree} from '@/lib/i18n';
 import {useLocale} from './language-switcher';
@@ -24,12 +26,14 @@ export function ComparisonData(){
  const needle=query.toLowerCase().trim();
  const publicRuns=runs.filter(r=>(workload==='all'||r.workload===workload)&&[r.model,r.chip,r.platform,r.runtime,...r.gpuNames].join(' ').toLowerCase().includes(needle));
  return localizeTree(<div className="fit-dashboard">
-  <div className="fit-overview"><div><Activity/><span>Public app reports</span><strong>{runStatus?'—':runs.length}</strong></div><div><FileJson/><span>App compatibility</span><strong>0.7 <small>JSON</small></strong></div></div>
+  <nav className="rankings-jumps" aria-label="Comparison sections"><a href="#measured">0.7 workload results</a><a href="#archive">Earlier app results</a><a href="#setups">6 hardware recommendations</a></nav>
+  <div className="fit-overview"><div><Activity/><span>0.7 workload reports</span><strong>{runStatus?'—':runs.length}</strong></div><div><FileJson/><span>App compatibility</span><strong>0.7 <small>JSON</small></strong></div></div>
   <div className="fit-legend" aria-label="Fit grade legend">{(['A','B','C','D','U'] as FitGrade[]).map(grade=><div key={grade}><FitBadge grade={grade}/><small>{({A:'2+ jobs measured',B:'1 job measured',C:'Agent use untested',D:'Tested level missed guideline',U:'More evidence needed'})[grade]}</small></div>)}</div>
   <FitGuide/>
+
   <p className="fit-local-note">Challenge checked means a one-time server ticket and consistency checks passed. Hardware and model execution remain self-reported. Quarantined reports are excluded from rankings.</p>
   <div className="fit-search"><Search size={18}/><input aria-label="Search hardware or model" placeholder="Search hardware, model or runtime" value={query} onChange={e=>{setQuery(e.target.value);}}/></div>
-  <section className="panel fit-section" aria-labelledby="app-fit-title">
+  <section className="panel fit-section" id="measured" aria-labelledby="app-fit-title">
    <div className="fit-section-head"><div><span className="fit-eyebrow">01 / MEASURED WORKLOAD FIT</span><h2 id="app-fit-title">Your setup. Your workload.</h2><p>Read the grade alongside the tested job count, completion rate and worst request latency.</p></div><label className="fit-import"><FileJson size={17}/><span>Open 0.7 JSON</span><input type="file" accept=".json,application/json" aria-label="Open 0.7 workload report" onChange={e=>{void inspect(e.target.files?.[0]);e.target.value='';}}/></label></div>
    <p className="fit-local-note">Local preview stays in this browser. Opening a report does not upload or publish it.</p>
    {importStatus&&<p role="status" className="fit-warning">{importStatus}</p>}
@@ -39,5 +43,7 @@ export function ComparisonData(){
    <p className="fit-footnote">Latest 50 public reports. Community submissions are format-checked, not independently verified. Grades apply only to the measured workload and levels.</p>
   </section>
 
+ <PublicArchive/>
+ <HardwarePicks compact/>
  </div>,locale);
 }

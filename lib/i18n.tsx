@@ -29,7 +29,7 @@ export function localizeTree(node:ReactNode,locale:Locale):ReactNode {
  const element=node as ReactElement<Record<string,unknown>>;const props=element.props;
  if(['pre','code','script','style'].includes(String(element.type))||props['data-no-translate'])return element;
  const next:Record<string,unknown>={};
- for(const key of ['aria-label','title','placeholder'])if(typeof props[key]==='string')next[key]=translate(props[key] as string,locale);
+ for(const key of ['aria-label','title','placeholder','alt'])if(typeof props[key]==='string')next[key]=translate(props[key] as string,locale);
  if(typeof props.href==='string')next.href=localizeHref(props.href,locale);
  if(props.children!==undefined)next.children=localizeTree(props.children as ReactNode,locale);
  return cloneElement(element,next);
