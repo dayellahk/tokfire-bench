@@ -1,4 +1,4 @@
-import type {WorkloadReport} from './workloads.ts';
+import {isAgentWorkload,type WorkloadReport} from './workloads.ts';
 
 // Fingerprints of the shipped 0.7 Python/Android profiles, not user-supplied labels.
 export const WORKLOAD_FINGERPRINTS = {
@@ -6,6 +6,9 @@ export const WORKLOAD_FINGERPRINTS = {
   business: '9c04d0c111d7c4735d0278713cc1db8247876423ccecb70d59cb5d7147855b00',
   'long-summary': '762b718555a97d6ea87a12d5315e090770ceea3f296f7607f9d10ff422eef2a3',
   'agent-tools': 'b205c9392de20f87ec3b40533e20a9ac4eb3ed6f6534845c427992afe80b566c',
+  'agent-data': '0247ccdb40faf7f19027c0160636497b0bef471ecef6fb7769f2d7864b8fae01',
+  'agent-research': '0e3d559c767461d5a8060b4d9bb9b1d40529e3fbcefeab4ae7fec8279adf9d1c',
+  'agent-recovery': '967a5035bb4e07d9a1eda5d12136cc5eeec2a2a38e73bb3a20bb0fc2e003d6e4',
 } as const;
 export type FitGrade = 'A' | 'B' | 'C' | 'D' | 'U';
 export const FIT_LABELS: Record<FitGrade, string> = {
@@ -20,7 +23,7 @@ export const FIT_REASONS = {
   'slow-decode': 'At least one request decoded below 30 tok/s.',
   'slow-visible': 'At least one request took over 3 s to produce visible output.',
   'remote-hardware': 'The inference server hardware was not measured by this client.',
-  'unknown-profile': 'The workload fingerprint does not match a shipped 0.7 profile.',
+  'unknown-profile': 'The workload fingerprint does not match a shipped workload profile.',
 } as const;
 export type FitReason = keyof typeof FIT_REASONS;
 export type FitLevel = {
@@ -34,7 +37,7 @@ export type WorkloadFit = {version: 'tokfire-fit-v1'; grade: FitGrade; maxSmooth
 // Assess each tested level independently. Never extrapolate capacity, merge reports,
 // replace per-request timing with aggregate throughput, or grade client hardware as server hardware.
 export function assessWorkloadFit(report: WorkloadReport): WorkloadFit {
-  const agent = report.settings.workload === 'agent-tools';
+  const agent = isAgentWorkload(report.settings.workload);
   const attributable = report.settings.hardwareRole === 'inference-host' && report.settings.inferenceLocation === 'same-device';
   const knownProfile = report.settings.workloadSha256 === WORKLOAD_FINGERPRINTS[report.settings.workload];
   const levels = report.settings.concurrencyLevels.map(jobs => {

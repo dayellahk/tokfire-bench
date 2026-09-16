@@ -666,5 +666,17 @@
   "Invalid code": "代码不正确",
   "Invalid backup code": "恢复码不正确",
   "Invalid password": "密码不正确",
-  "Verification failed. Try a new code.": "验证失败，请尝试新代码。"
+  "Verification failed. Try a new code.": "验证失败，请尝试新代码。",
+  "Agent simulation: CSV analysis": "Agent 模拟：CSV 分析",
+  "Agent simulation: multi-page research": "Agent 模拟：多页资料研究",
+  "Agent simulation: retry and idempotency": "Agent 模拟：重试与防止重复操作",
+  "Task checks": "任务检查",
+  "Recovery retries:": "恢复重试：",
+  "Simulation results check local artifacts and service state. They are not actual Hermes, OpenClaw, Pi, Claude Code or Codex runs.": "模拟结果验证本机文件与服务状态，并非真正运行 Hermes、OpenClaw、Pi、Claude Code 或 Codex。",
+  "Compare task completion and total task time first. Missing decode metrics do not erase verified task checks. Small samples cannot establish general agent reliability.": "请先比较任务完成率与总耗时。缺少解码数据不会抹去已通过的任务检查。少量样本不足以证明一般 agent 可靠性。",
+  "Report is too large. Maximum size is 4 MB.": "报告过大，上限为 4 MB。",
+  "Desktop 0.8 adds CSV analysis, multi-page research and retry simulations with verified task checks. These are TokFire simulations, not actual third-party agent runs. Android 0.7 retains the original profiles.": "桌面版 0.8 加入 CSV 分析、多页研究及重试模拟，并验证任务结果。这些是 TokFire 模拟，并非真正运行第三方 agent。Android 0.7 保留原有测试。",
+  "Task deadline": "任务时限",
+  "The workload fingerprint does not match a shipped workload profile.": "工作负载指纹不符合已发布的测试定义。",
+  "TokFire fit v1 uses the same interaction guideline across apps 0.7 and 0.8: every task completes, every request decodes at least 30 tok/s, and every request produces visible output within 3 seconds. Missing runtime metrics remain unknown.": "TokFire fit v1 在 app 0.7 与 0.8 使用相同交互指引：所有任务完成，每个请求至少 30 tok/s，并在 3 秒内产生可见输出。缺少的 runtime 数据保留为未知。"
 }

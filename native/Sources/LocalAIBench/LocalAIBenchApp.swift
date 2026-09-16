@@ -171,7 +171,7 @@ struct WorkspaceView: View {
                 if bench.usesJobs {
                     Toggle(L("workloadMode"), isOn: $bench.workloadMode).disabled(bench.running || bench.externalRuntime)
                     if bench.usesWorkloads {
-                        Picker(L("workload"), selection: $bench.workload) { ForEach(["short-chat", "business", "long-summary", "agent-tools"], id: \.self) { Text(L($0)).tag($0) } }.disabled(bench.running)
+                        Picker(L("workload"), selection: $bench.workload) { ForEach(["short-chat", "business", "long-summary", "agent-tools", "agent-data", "agent-research", "agent-recovery"], id: \.self) { Text(L($0)).tag($0) } }.disabled(bench.running)
                         Stepper("\(L("repeats")): \(bench.repeats)", value: $bench.repeats, in: 3...5).disabled(bench.running)
                         Toggle(L("sweep"), isOn: $bench.sweep).disabled(bench.running)
                         Text(L("workloadHelp")).font(.caption).foregroundColor(muted)
@@ -225,7 +225,7 @@ struct WorkspaceView: View {
     }
     private var history: some View {
         VStack(spacing: 18) {
-            ForEach(bench.workloadHistory, id: \.path) { url in Panel { HStack { Text("0.7 · " + url.deletingPathExtension().lastPathComponent).lineLimit(1); Spacer(); Button(L("view")) { bench.inspectWorkload(url); page = .benchmark }.disabled(bench.running) } } }
+            ForEach(bench.workloadHistory, id: \.path) { url in Panel { HStack { Text(L("workload") + " · " + url.deletingPathExtension().lastPathComponent).lineLimit(1); Spacer(); Button(L("view")) { bench.inspectWorkload(url); page = .benchmark }.disabled(bench.running) } } }
             HStack { Text("\(bench.history.count + bench.workloadHistory.count)"); Spacer(); Button(L("reportFolder")) { try? FileManager.default.createDirectory(at: reportsFolder, withIntermediateDirectories: true); NSWorkspace.shared.open(reportsFolder) } }; if bench.history.isEmpty && bench.workloadHistory.isEmpty { Text(L("noReports")) }; ForEach(bench.history) { item in Panel { HStack { VStack(alignment: .leading, spacing: 6) { Text(item.report.hardware.chip).font(.headline); Text(item.report.measuredAt).font(.caption).foregroundColor(muted) }; Spacer(); Tag(text: item.report.isOMLX ? "oMLX" : L(item.report.isTrial ? "trial" : "fullTest")); Button(L("view")) { bench.inspect(item); page = .benchmark }.disabled(bench.running) } } } }
     }
     private var settings: some View {

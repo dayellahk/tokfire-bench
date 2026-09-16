@@ -7,7 +7,7 @@ TOKFIRE_APP_OUTPUT="$bench_stage/TokFire Bench.app" bash build-app.sh
 codesign --verify --strict "$bench_stage/TokFire Bench.app"
 ln -s /Applications "$bench_stage/Applications"
 cat > "$bench_stage/READ ME.txt" <<'README'
-TokFire Bench 0.7.0 — by TokFire Labs · tokfires.com
+TokFire Bench 0.8.0 — by TokFire Labs · tokfires.com
 Apple Silicon local developer build
 
 Drag TokFire Bench.app to Applications, then open it.
@@ -24,6 +24,8 @@ then download and verify before testing. Offline mode supports local files.
 Select one model and 1–3 concurrent jobs before Run (GGUF or MLX).
 Disable Concurrent job test for the older sequential GGUF comparison profile.
 Workloads include chat, business, long summary and bounded tool tasks.
+Version 0.8 adds CSV analysis, multi-page research and retry/idempotency simulations.
+Task artifacts are checked; these are not actual third-party agent executions.
 Choose 3–5 repeats and an optional concurrency sweep.
 Quick trial accepts one model. A local report and commentary are saved in:
 ~/Library/Application Support/LocalAIBench/Reports/
@@ -49,7 +51,7 @@ controls have English and both Chinese translations; other languages use
 English fallback.
 README
 mkdir -p build
-bench_dmg="$PWD/build/TokFireBench-0.7.0-macos-arm64.dmg"
+bench_dmg="$PWD/build/TokFireBench-0.8.0-macos-arm64.dmg"
 hdiutil create -volname "TokFire Bench" -srcfolder "$bench_stage" -ov -format UDZO "$bench_dmg"
 hdiutil verify "$bench_dmg"
 shasum -a 256 "$bench_dmg" > "$bench_dmg.sha256"

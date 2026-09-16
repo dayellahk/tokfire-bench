@@ -3,8 +3,10 @@ import hashlib
 import json
 import math
 import statistics
+from pathlib import Path
+from agent_workloads import SIM_PROFILES
 
-VERSION = '0.7.0'
+VERSION = '0.8.0'
 SPEC = 'tokfire-workloads-v1'
 PROFILES = {
     'short-chat': {'label': 'Short Q&A', 'maxOutputTokens': 512, 'contextTokens': 4096,
@@ -20,8 +22,13 @@ PROFILES = {
                     'prompt': 'You are testing a local order workflow. Reply with exactly one JSON object per turn, without markdown. First call {"tool":"lookup","arguments":{"table":"orders"}}. Read its records, calculate each quantity * unit_price, then call {"tool":"sum","arguments":{"values":[the three line totals]}}. After receiving the sum, finish with {"answer":the total}. Do not invent tool results. Only lookup and sum exist.'},
 }
 
+PROFILES.update(SIM_PROFILES)
+
 def fingerprint(profile):
-    return hashlib.sha256(json.dumps(PROFILES[profile], sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+    definition = PROFILES[profile]
+    if profile in SIM_PROFILES:
+        definition = {'profile': definition, 'harnessSha256': hashlib.sha256(Path(__file__).with_name('agent_workloads.py').read_bytes().replace(b'\r\n',b'\n')).hexdigest()}
+    return hashlib.sha256(json.dumps(definition, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
 
 def levels(maximum, sweep):
     if type(maximum) is not int or not 1 <= maximum <= 20:
@@ -51,8 +58,8 @@ def summaries(report):
         full_visible = bool(requests) and all(x is not None for x in visible_waits)
         full_decode = bool(requests) and all(x is not None for x in speeds)
         reliable = len(rows) >= 100
-        smooth = len(good) == len(rows) and full_decode and full_visible and slow >= 30 and longest <= 3000
-        target = len(good) == len(rows) and full_decode and full_visible and slow >= report['settings']['targetTps'][0] and longest <= 3000
+        smooth = len(good) == len(rows) and not any(s['toolErrors'] for s in rows) and full_decode and full_visible and slow >= 30 and longest <= 3000
+        target = len(good) == len(rows) and not any(s['toolErrors'] for s in rows) and full_decode and full_visible and slow >= report['settings']['targetTps'][0] and longest <= 3000
         result.append({'concurrency': count, 'samples': len(rows), 'complete': len(good),
                        'partial': sum(s['status'] == 'partial' for s in rows),
                        'failed': sum(s['status'] in ('failure', 'error') for s in rows),
@@ -67,7 +74,7 @@ def summaries(report):
 def assessment(report):
     def fmt(value, unit=''):
         return 'unavailable' if value is None else f'{value:.1f}{unit}'
-    lines = ['# TokFire Bench 0.7 — workload assessment', '',
+    lines = ['# TokFire Bench 0.8 — workload assessment', '',
              f"{report['hardware']['platform']} · {report['hardware']['chip']} · {report['runtime']['name']}",
              f"Workload: {PROFILES[report['settings']['workload']]['label']}",
              'One selected model; jobs call it concurrently. Warm-up requests are excluded.', '',
@@ -91,11 +98,18 @@ def assessment(report):
     candidates = [r for r in rows if r['smooth']]
     lines += ['', ('Highest measured concurrency meeting the interactive guideline: ' + str(max(r['concurrency'] for r in candidates))) if candidates else 'No tested concurrency met the full interactive guideline.',
               '¹ Decode is reported only when supplied by the runtime. Client stream throughput and end-to-end throughput are separate metrics. Missing metrics remain null.',
-              'Aggregate throughput is total output tokens divided by the measured wall time of the whole concurrent round, including failures and tool time. It is not per-job speed.',
-              'Chat completion means a valid measured response, not a correct answer. Agent success is the deterministic lookup → sum → answer fixture, not Hermes/OpenClaw, browser automation, or general intelligence.',
+              'Aggregate throughput counts tokens from fully measured requests over whole-round wall time, including failures and tool time. Tokens from incomplete streams are unknown and excluded; this is not total delivered throughput or per-job speed.',
+              'Chat completion is not answer correctness. Agent simulations verify local artifacts and service state; the legacy agent-tools profile only verifies lookup → sum → answer. Neither is an actual Hermes/OpenClaw/Pi/Claude Code/Codex run or a guarantee of autonomous ability.',
               '100–200 tok/s is a user-selected target, not a guaranteed speed for any ChatGPT or Claude subscription.',
               'Prompt lengths are fixed text with a unique request prefix; actual tokens are runtime-counted. Different tokenizers and cache behavior belong to separate comparisons.',
               'No sustained thermal, energy, total GPU-memory, or synthetic llama-bench performance claim is made. Optional battery snapshots are observations, not energy measurements.']
+    if report['settings']['workload'] in SIM_PROFILES:
+        lines += ['', '## Deterministic task checks', 'The task deadline includes all model calls, tools and retries. Injected service failures are expected; invalid model tool calls are counted separately.']
+        for row in rows:
+            jobs = [s for s in report['models'][0]['samples'] if s['concurrency'] == row['concurrency']]
+            checks = [c for s in jobs for c in s['verification']['checks']]
+            lines.append(f"{row['concurrency']} jobs: {sum(c['passed'] for c in checks)}/{len(checks)} checks passed; {sum(s['verification']['retries'] for s in jobs)} recovery retries.")
+        lines += ['Success means the requested artifacts/state passed fixed checks, not just valid JSON. Compare completion rate and total task time before tokens/sec. Small runs cannot establish broad real-world reliability.']
     return '\n'.join(lines) + '\n'
 
 class AgentTools:

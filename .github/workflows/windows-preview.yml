@@ -32,5 +32,5 @@ jobs:
         with:
           name: TokFireBench-Windows-Preview
           path: |
-            public/TokFireBench-0.7.0-windows-x64.zip
-            public/TokFireBench-0.7.0-windows-x64.zip.sha256
+            public/TokFireBench-0.8.0-windows-x64.zip
+            public/TokFireBench-0.8.0-windows-x64.zip.sha256

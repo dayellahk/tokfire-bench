@@ -27,7 +27,7 @@ public sealed class BenchForm:Form {
   var bench=Page("benchmark");var explore=Page("discover");var reports=Page("history");var prefs=Page("settings");var connected=new TabPage("Account"){Tag="connectAccount"};connected.Controls.Add(account);tabs.TabPages.Add(connected);
   bench.Controls.Add(Label("Windows x64 preview · workload benchmark · one model, concurrent jobs"));
   engine.Items.AddRange(new object[]{"llama.cpp","Ollama","vLLM"});engine.SelectedIndex=0;
-  workload.Items.AddRange(new object[]{"short-chat","business","long-summary","agent-tools"});workload.SelectedIndex=0;
+  workload.Items.AddRange(new object[]{"short-chat","business","long-summary","agent-tools","agent-data","agent-research","agent-recovery"});workload.SelectedIndex=0;
   sweep.Tag="sweep";
   bench.Controls.Add(Row(LabelKey("runtime"),engine,LabelKey("workload"),workload));
   bench.Controls.Add(Row(LabelKey("localEndpoint"),endpoint,LabelKey("servedModel"),servedModel));

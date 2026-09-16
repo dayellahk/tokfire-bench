@@ -96,6 +96,6 @@ class Workloads(unittest.TestCase):
         with self.assertRaises(runner.MeasurementError):runner.measure_job('http://127.0.0.1:1','vLLM','x','short-chat',4096,1,1,1)
     def test_profile_prompt_hashes_differ(self):
         from workload_core import fingerprint
-        self.assertEqual(len(set(fingerprint(p) for p in PROFILES)),4)
+        self.assertEqual(len(set(fingerprint(p) for p in PROFILES)),7)
 
 if __name__=='__main__':unittest.main()

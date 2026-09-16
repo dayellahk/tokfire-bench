@@ -2,7 +2,7 @@ name: Workload framework
 on:
   workflow_dispatch:
   push:
-    paths: ['native/Sources/LocalAIBench/Resources/workload*', 'native/Tests/test_workloads.py', 'lib/workloads.ts', 'tests/workloads.test.mjs', 'android/**', '.github/workflows/workloads.yml']
+    paths: ['native/Sources/LocalAIBench/Resources/workload*', 'native/Sources/LocalAIBench/Resources/agent_workloads.py', 'native/Tests/test_workloads.py', 'native/Tests/test_agent_workloads.py', 'lib/workloads.ts', 'tests/workloads.test.mjs', 'android/**', '.github/workflows/workloads.yml']
 permissions:
   contents: read
 jobs:
@@ -17,7 +17,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Workload protocol and failure tests
-        run: python -m unittest discover -s native/Tests -p test_workloads.py -v
+        run: python -m unittest discover -s native/Tests -p "test_*workloads.py" -v
       - name: Probe platform hardware without identifiers
         run: python -c "import sys,json; sys.path.insert(0,'native/Sources/LocalAIBench/Resources'); from workload_runner import detect_hardware; print(json.dumps(detect_hardware()))"
   android:

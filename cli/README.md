@@ -1,4 +1,4 @@
-# TokFire Bench 0.7 command-line runner
+# TokFire Bench 0.8 command-line runner
 
 Python 3.10+. Works on Apple Silicon macOS, Windows, Linux and Android/Termux.
 The native Android APK is in `android/`; Termux is an additional option.
@@ -21,7 +21,9 @@ python3 workload_runner.py --engine Ollama --endpoint http://127.0.0.1:11434 \
   --model your-model-id --workload agent-tools --jobs 1 --output report.json
 ```
 
-Workloads: `short-chat`, `business`, `long-summary`, `agent-tools`.
+Workloads: `short-chat`, `business`, `long-summary`, `agent-tools`, `agent-data`, `agent-research`, `agent-recovery`.
+
+New agent simulations verify CSV reports, multi-page evidence and retry/idempotency. They use bounded JSON tool actions and private synthetic files, not actual Hermes/OpenClaw/Pi/Claude Code/Codex. Each task has at most 12 model responses and a whole-task `--timeout` (default 180 seconds). Compare task success and time before decode speed; full native agent behavior remains unmeasured. Android APK 0.7 keeps its original four profiles; Python/Termux supports these new profiles. See `docs/AGENT-SIMULATIONS.md`.
 Measured repetitions: `--repeats 3`, `4` or `5`; one excluded warm-up.
 Long-summary configures 32,768 context tokens; fit is an estimate, not a guarantee.
 `--gpu-layers 0` requests a CPU-only managed llama.cpp server; default is 999.

@@ -10,11 +10,11 @@ libraries=json.loads((build/'TokFire Bench.deps.json').read_text())['libraries']
 for package,names in [('microsoft.netcore.app.runtime.win-x64',['LICENSE.TXT','THIRD-PARTY-NOTICES.TXT']),('microsoft.windowsdesktop.app.runtime.win-x64',['LICENSE']),('microsoft.web.webview2',['LICENSE.txt','NOTICE.txt'])]:
     folder=next(k.lower().removeprefix('runtimepack.') for k in libraries if k.lower().removeprefix('runtimepack.').split('/')[0]==package)
     for name in names:shutil.copyfile(nuget/folder/name,notices/(folder.split('/')[0]+'-'+name))
-out=Path(sys.argv[1]).resolve() if len(sys.argv)>1 else root/'public/TokFireBench-0.7.0-windows-x64.zip'
+out=Path(sys.argv[1]).resolve() if len(sys.argv)>1 else root/'public/TokFireBench-0.8.0-windows-x64.zip'
 out.parent.mkdir(parents=True,exist_ok=True)
 with zipfile.ZipFile(out,'w',zipfile.ZIP_DEFLATED,compresslevel=6) as z:
     for p in sorted(build.rglob('*')):
-        if p.is_file() and p.suffix not in ('.pdb','.pyc') and '__pycache__' not in p.parts:z.write(p,Path('TokFireBench-0.7.0')/p.relative_to(build))
+        if p.is_file() and p.suffix not in ('.pdb','.pyc') and '__pycache__' not in p.parts:z.write(p,Path('TokFireBench-0.8.0')/p.relative_to(build))
 # Reopen only after the central directory and buffered writes are finalized.
 with zipfile.ZipFile(out,'r') as z:
     bad=z.testzip()

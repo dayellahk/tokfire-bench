@@ -52,7 +52,7 @@ export default function Home() {const locale=useLocale();
     if(!file)return;
     setError('');setMessage('');
     try {
-      if(file.size>1_500_000)throw new Error('Report is too large. Maximum size is 1.5 MB.');
+      if(file.size>4_000_000)throw new Error('Report is too large. Maximum size is 4 MB.');
       const raw=JSON.parse(await file.text());
       if(raw?.specVersion==='tokfire-workloads-v1'){
         const parsed=workloadSchema.safeParse(raw);if(!parsed.success)throw new Error('Invalid workload report: incomplete rounds, inconsistent metrics or unsupported fields.');
@@ -92,7 +92,7 @@ export default function Home() {const locale=useLocale();
       <div className="side-foot"><span>TokFire Labs</span><b>tokfires.com</b></div>
     </aside>
     <section className="content">
-      <header className="topbar"><div className="eyebrow">MACOS · WINDOWS · LINUX · ANDROID</div><span className="alpha-badge">0.7 PREVIEW</span><AccountMenu/></header>
+      <header className="topbar"><div className="eyebrow">MACOS · WINDOWS · LINUX · ANDROID</div><span className="alpha-badge">0.8 PREVIEW</span><AccountMenu/></header>
       {error&&<div role="alert" className="notice error">{error}</div>}
       {message&&<div role="status" className="notice">{message}</div>}
       {tab==='benchmark'&&<>

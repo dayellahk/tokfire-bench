@@ -1,3 +1,7 @@
+## Version 0.8
+
+The workload menu now includes `agent-data`, `agent-research` and `agent-recovery`. These bounded agent simulations validate report artifacts and service state; they do not run actual third-party agent products. Full check-by-check commentary is saved beside the JSON report.
+
 # TokFire Bench 0.6.0 — Windows x64 Preview
 
 TokFire Labs · https://tokfires.com

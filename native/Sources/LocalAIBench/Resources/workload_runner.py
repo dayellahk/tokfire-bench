@@ -26,6 +26,7 @@ from pro_license import authorize
 import run_challenge
 CHALLENGE = None
 
+from agent_workloads import AgentWorkload, SIM_PROFILES
 from workload_core import VERSION, SPEC, PROFILES, fingerprint, levels, AgentTools, assessment
 
 CANCEL = threading.Event()
@@ -196,25 +197,38 @@ def stream(base, engine, model, messages, max_tokens, context, timeout=180):
 
 def measure_job(base, engine, model, profile, context, count, repeat, job, barrier=None, timeout=180):
     if barrier: barrier.wait(timeout=30)
-    start = time.perf_counter(); requests = []; agent = AgentTools(CHALLENGE['nonce'] if CHALLENGE else None); tool_ms = 0.0; error = None; status = 'complete'
-    messages = [{'role':'user', 'content':f'Run ID: {run_challenge.request_id(CHALLENGE, count, repeat, job)}\n' + PROFILES[profile]['prompt']}]
+    start = time.perf_counter(); requests = []; tool_ms = 0.0; error = None; status = 'complete'
+    request_id = run_challenge.request_id(CHALLENGE, count, repeat, job)
+    simulated = profile in SIM_PROFILES
+    agent = AgentWorkload(profile, request_id) if simulated else AgentTools(CHALLENGE['nonce'] if CHALLENGE else None)
+    is_agent = simulated or profile == 'agent-tools'
+    messages = [{'role':'user', 'content':f'Run ID: {request_id}\n' + PROFILES[profile]['prompt']}]
     try:
-        for step in range(5 if profile == 'agent-tools' else 1):
-            metrics, content = stream(base, engine, model, messages, PROFILES[profile]['maxOutputTokens'], context, timeout)
+        for step in range(12 if simulated else 5 if is_agent else 1):
+            remaining = timeout-(time.perf_counter()-start) if simulated else timeout
+            if remaining <= 0: raise MeasurementError('timeout')
+            metrics, content = stream(base, engine, model, messages, PROFILES[profile]['maxOutputTokens'], context, remaining)
             requests.append(metrics)
-            if profile != 'agent-tools':
+            if not is_agent:
                 if metrics['firstVisibleMs'] is None: status = 'partial'
                 break
             begin = time.perf_counter(); response, outcome = agent.execute(content); tool_ms += (time.perf_counter()-begin)*1000
+            if simulated:
+                emit('progress', phase='agent-step', message=f"{count} jobs · repeat {repeat} · job {job} · step {step+1}: {sum(c['passed'] for c in agent.checks())}/{len(agent.checks())} task checks")
             if outcome is not None: status = outcome; break
             messages += [{'role':'assistant','content':content}, {'role':'user','content':'Tool result: '+json.dumps(response)+'. Return the next JSON action or final answer.'}]
         else: status = 'partial' if agent.stage else 'failure'
     except MeasurementError as exc:
         if CANCEL.is_set(): raise
         error = exc.code; status = 'error'
-    return {'jobId':job, 'concurrency':count, 'repeat':repeat, 'status':status, 'errorCode':error,
+    finally:
+        verification = agent.evidence() if simulated else None
+        if simulated: agent.close()
+    result = {'jobId':job, 'concurrency':count, 'repeat':repeat, 'status':status, 'errorCode':error,
             'elapsedMs':(time.perf_counter()-start)*1000, 'requests':requests,
             'toolCalls':agent.calls, 'toolErrors':agent.errors, 'toolMs':tool_ms}
+    if simulated: result['verification'] = verification
+    return result
 
 def round_jobs(base, engine, model, profile, context, count, repeat, timeout):
     barrier = threading.Barrier(count); start = time.perf_counter(); rows = []
@@ -273,7 +287,7 @@ def run(options):
                 model = 'benchmark-model' if options.engine=='oMLX' else path.name
             emit('progress',phase='warmup',message='Running one excluded warm-up; first model initialization may take time')
             warmup = measure_job(base,options.engine,model,options.workload,context,1,0,0,timeout=options.timeout)
-            if warmup['status']=='error': raise ValueError('Warm-up failed: '+warmup['errorCode']+'. Verify model chat template, context capacity and streaming token usage.')
+            if warmup['status']=='error' and not (options.workload in SIM_PROFILES and warmup['errorCode']=='timeout'): raise ValueError('Warm-up failed: '+warmup['errorCode']+'. Verify model chat template, context capacity and streaming token usage.')
             for count in counts:
                 for repeat in range(1,options.repeats+1):
                     if CANCEL.is_set(): raise KeyboardInterrupt()

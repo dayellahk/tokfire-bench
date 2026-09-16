@@ -90,7 +90,7 @@ import UniformTypeIdentifiers
             return HistoryItem(url: url, report: report)
         }
         workloadHistory = urls.filter { url in
-            guard let data = try? Data(contentsOf: url), data.count <= 1_500_000,
+            guard let data = try? Data(contentsOf: url), data.count <= 4_000_000,
                   let report = try? JSONDecoder().decode(WorkloadReport.self, from: data) else { return false }
             return report.specVersion == "tokfire-workloads-v1" && !report.models.isEmpty
         }.sorted { $0.lastPathComponent > $1.lastPathComponent }

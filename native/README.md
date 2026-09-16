@@ -1,3 +1,7 @@
+## Version 0.8 agent simulations
+
+Choose CSV analysis, multi-page research or retry/idempotency in the workload menu. Results include verified artifact/state checks. These are TokFire simulations, not actual third-party agent integrations. See [the task definitions and limits](../docs/AGENT-SIMULATIONS.md).
+
 # TokFire Bench 0.5.2 (macOS Apple Silicon)
 
 A native SwiftUI benchmark lab with a live Hugging Face GGUF catalogue,
