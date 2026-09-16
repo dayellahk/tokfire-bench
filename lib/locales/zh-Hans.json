@@ -519,5 +519,20 @@
   "0.7 workload reports": "0.7 工作负载报告",
   "Switch color theme": "切换色彩主题",
   "Light mode": "浅色模式",
-  "Dark mode": "深色模式"
+  "Dark mode": "深色模式",
+  "YOUR AI. YOUR HARDWARE.": "你的 AI，你的硬件。",
+  "Continue with Google": "使用 Google 继续",
+  "Checking sign-in options…": "正在加载登录方式…",
+  "Google sign-in is temporarily unavailable.": "Google 登录暂时无法使用。",
+  "Use your Google account. No new password needed.": "使用你的 Google 账号，无需另设密码。",
+  "Google sign-in is coming soon.": "Google 登录即将推出。",
+  "or use email": "或使用邮箱",
+  "Continue as a guest": "以访客身份继续",
+  "Benchmark uploads do not require an account.": "上传测试结果无需登录账号。",
+  "This email already has an account. Sign in using your existing password.": "此邮箱已有账号，请使用原有密码登录。",
+  "Google sign-in was cancelled. You can try again or continue as a guest.": "已取消 Google 登录。你可以重试或以访客身份继续。",
+  "Google sign-in could not be completed. Please try again or use your email and password.": "未能完成 Google 登录。请重试或使用邮箱及密码登录。",
+  "Optional Google sign-in": "可选 Google 登录",
+  "When you choose Google sign-in, TokFire Labs stores your Google account identifier, name, email and profile picture to create and authenticate your account. These details are not included in public benchmark results. We do not request access to Gmail or Google Drive.": "当你选择 Google 登录，TokFire Labs 会保存你的 Google 账号标识、姓名、邮箱及头像，用于创建账号及验证登录。这些资料不会出现在公开测试结果。我们不会请求访问 Gmail 或 Google Drive。",
+  "Signing in does not transfer your guest reports. Sign out in the same browser to manage those reports again. To request account deletion, contact the support email shown on the Google consent screen.": "登录不会转移你的访客报告。如需再次管理这些报告，请在同一浏览器退出登录。如需删除账号，请联系 Google 同意页面所列的支持邮箱。"
 }
