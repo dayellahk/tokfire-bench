@@ -43,8 +43,11 @@ Pro live sales still await Lemon Squeezy merchant activation. This deployment do
 
 ## Multilingual portal, GitHub and Cloudflare mirror — 2026-09-16
 
-- Primary release: `/opt/tokfire/releases/0.6.1-i18n-r2`. English, Traditional Chinese (`/zh-Hant`) and Simplified Chinese (`/zh-Hans`) include home/comparison/data UI, sign-in, methodology, references and native account connection.
+- Primary release: `/opt/tokfire/releases/0.6.1-i18n-r3`. English, Traditional Chinese (`/zh-Hant`) and Simplified Chinese (`/zh-Hans`) include home/comparison/data UI, sign-in, methodology, references and native account connection.
 - `/sitemap.xml` lists nine public URLs with language alternates. `/robots.txt` references it. Sign-in/native-connect have noindex metadata and are omitted from the sitemap.
 - Verified 15 language/page routes, HTML language, canonical/hreflang, account noindex and 404 behavior. Homepage plus 12 stylesheet/script/icon assets pass. A clean Next.js build resolved stale CSS from the initial incremental build.
 - GitHub repository: https://github.com/dayellahk/tokfire-bench (private, default branch main). Source history uploaded; no database contents, real env files or credentials are tracked. Credential-pattern inspection of 482 Git objects found only the deliberate `deploy/env.example` placeholder.
 - Cloudflare Pages: https://tokfire-bench.pages.dev . Public pages mirror the main website; account/reference/data actions and installers link to the primary domain. Canonical URLs and sitemap retain the primary domain. See `CLOUDFLARE-STATIC.md` for explicit re-sync commands. No main-domain DNS or database migration was performed.
+
+- The desktop connection callback page keeps its existing URL to preserve compatibility with the released Mac client; language selection remains available on the portal and sign-in pages.
+- Windows CI passed on GitHub after ZIP validation was moved after archive close: https://github.com/dayellahk/tokfire-bench/actions/runs/35045389981 . This covers build/packaging and automated tests, not interactive GUI or GPU inference.

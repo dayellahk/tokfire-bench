@@ -24,4 +24,4 @@ Pending on a real Windows device:
 - Windows-specific prose and report translations; currently English.
 - Authenticode signing and installer.
 
-The GitHub Actions workflow is supplied for a future Windows runner; it has not been executed in this session. No native Windows or GPU test pass is claimed.
+GitHub Windows CI passed on 2026-09-16: actual Windows CIM probe, concurrency/lifecycle unit tests, C# report/catalogue tests, Windows publish, finalized-ZIP integrity and artifact upload. Run: https://github.com/dayellahk/tokfire-bench/actions/runs/35045389981 . This does not test the interactive GUI, WebView2 sign-in or real GPU inference. The website download remains the original checksum-verified cross-compiled preview.

@@ -202,7 +202,7 @@ final class DownloadTransfer: NSObject, URLSessionDownloadDelegate, @unchecked S
                 let free = (try FileManager.default.attributesOfFileSystem(forPath: modelDirectory.path)[.systemFreeSize] as? NSNumber)?.int64Value ?? 0
                 guard free > file.size + 2_000_000_000 else { throw NSError(domain: "Hub", code: 4, userInfo: [NSLocalizedDescriptionKey: "可用磁碟空間不足；下載需額外預留 2 GB。"] ) }
                 let transfer = DownloadTransfer(expected: file.size) { [weak self] value in
-                    Task { @MainActor in self?.downloadProgress = value }
+                    Task { @MainActor [weak self] in self?.downloadProgress = value }
                 }
                 let url = endpoint(path: "\(model.id)/resolve/\(revision)/\(file.path)")
                 var req = URLRequest(url: url); req.timeoutInterval = 120
