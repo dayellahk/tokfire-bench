@@ -128,7 +128,7 @@ export default function Home() {const locale=useLocale();
           </div>
         </section>}
       </>}
-      {tab==='rankings'&&<section className="page-section"><div className="kicker">COMMUNITY / OPT-IN RESULTS</div><div className="section-title"><div><h1>Find your workload fit.</h1><p>Match hardware and models to chat, single tool tasks or parallel tool workflows. See what was measured before choosing your setup.</p></div></div>
+      {tab==='rankings'&&<section className="page-section rankings-page"><div className="finder-hero"><div className="kicker">LOCAL AI / FIND · TEST · SHARE</div><h1>Find local AI<br/><em>for your computer.</em></h1><p>Start with real community results. Find a model worth trying, then put your own hardware to the test.</p><a href="#finder-title">Find my starting point <span aria-hidden="true">↓</span></a></div>
         <ComparisonData/>
         <div className="method-note"><ShieldCheck/><div><b>Measured evidence before a global score</b><p>There is no verified reference fleet yet. We will calibrate hardware predictions and a fixed standard suite before publishing an overall AI score.</p></div></div>
       </section>}

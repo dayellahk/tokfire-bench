@@ -51,3 +51,12 @@ Pro live sales still await Lemon Squeezy merchant activation. This deployment do
 
 - The desktop connection callback page keeps its existing URL to preserve compatibility with the released Mac client; language selection remains available on the portal and sign-in pages.
 - Windows CI passed on GitHub after ZIP validation was moved after archive close: https://github.com/dayellahk/tokfire-bench/actions/runs/35045389981 . This covers build/packaging and automated tests, not interactive GUI or GPU inference.
+
+## Hardware-first rankings — 16 September 2026
+
+- Live release: `/opt/tokfire/releases/0.7.0-finder-build19`. Previous cyber release retained at `/opt/tokfire/releases/0.7.0-cyber-build17`.
+- Rankings now lead with chip/GPU/model search, platform, exact tested RAM and intended workload. Matching uses every search term, excludes remote request-client hardware, and requires measured agent job levels. Failed results remain visible; passing grades sort first without a new synthetic score.
+- Compact evidence cards show hardware/model, workload grade, completed tasks, measured smooth-job capacity and the slowest request at an identified job level. Detailed reports expand on demand. Coverage counts describe the returned latest-50-report window.
+- Contribution section explains why testing one's own machine matters, links to localized installers and describes optional guest/public sharing. Starter setups, historical profiles and local JSON preview are secondary expandable sections. EN, Traditional Chinese and Simplified Chinese copy updated.
+- Validation: 61 automated tests pass (including four finder behavior tests); TypeScript, focused ESLint and Linux production build pass. Browser checks verified search, platform/agent/parallel filters, empty results, expanded evidence, local report preview and localized download navigation. Light/dark desktop and 390 px mobile checked without horizontal overflow. Live assets and translated route/sitemap checks pass.
+- No database/schema, benchmark thresholds, upload permissions or raw-reference publishing changes. Existing report integrity and privacy boundaries remain in effect.

@@ -22,4 +22,4 @@ jobs:
         run: |
           test ! -e .openai/hosting.json
           npx tsc --noEmit
-      - run: npx eslint components/comparison-data.tsx components/workload-fit-view.tsx lib/workload-fit.ts lib/workload-comparisons.ts
+      - run: npx eslint components/comparison-data.tsx components/workload-fit-view.tsx lib/workload-fit.ts lib/workload-comparisons.ts lib/result-finder.ts
