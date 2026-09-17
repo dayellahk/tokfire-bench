@@ -1,3 +1,14 @@
+## Installing on macOS
+
+Open the DMG and drag **TokFire Bench** to **Applications**, then launch it from
+Applications and eject the installer. The installation window includes a visual
+arrow and English/Traditional Chinese instructions.
+
+The current public preview is **not Apple notarized** and macOS may block it.
+The new installer design does not change that signing status. A Developer ID
+signed/notarized release is pending Apple Developer enrollment.
+See [packaging and release signing](Packaging/README.md).
+
 ## Version 0.8 agent simulations
 
 Choose CSV analysis, multi-page research or retry/idempotency in the workload menu. Results include verified artifact/state checks. These are TokFire simulations, not actual third-party agent integrations. See [the task definitions and limits](../docs/AGENT-SIMULATIONS.md).

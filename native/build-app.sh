@@ -1,6 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 cd "$(dirname "$0")"
+bench_identity="${TOKFIRE_SIGN_IDENTITY:--}"
+if [[ "${TOKFIRE_RELEASE:-0}" == 1 && "$bench_identity" != "Developer ID Application:"* ]]; then
+  echo "Release requires TOKFIRE_SIGN_IDENTITY=Developer ID Application: ..." >&2
+  exit 1
+fi
 swift build --scratch-path .build-release --configuration release
 bench_bin="$(swift build --scratch-path .build-release --configuration release --show-bin-path)"
 bench_stage="$(mktemp -d /private/tmp/localai-app.XXXXXX)"
@@ -22,7 +27,7 @@ cat > "$bench_app/Contents/Info.plist" <<'PLIST'
 <key>CFBundleIconFile</key><string>AppIcon</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleShortVersionString</key><string>0.8.0</string>
-<key>CFBundleVersion</key><string>12</string>
+<key>CFBundleVersion</key><string>13</string>
 <key>LSMinimumSystemVersion</key><string>13.0</string>
 <key>NSHighResolutionCapable</key><true/>
 </dict></plist>
@@ -31,7 +36,11 @@ PLIST
 # Remove only packaging metadata, preserving security/quarantine attributes.
 xattr -dr com.apple.FinderInfo "$bench_app" 2>/dev/null || true
 xattr -dr com.apple.ResourceFork "$bench_app" 2>/dev/null || true
-codesign --force --sign - "$bench_app"
+if [[ "$bench_identity" == "-" ]]; then
+  codesign --force --sign - "$bench_app"
+else
+  codesign --force --options runtime --timestamp --sign "$bench_identity" "$bench_app"
+fi
 codesign --verify --strict "$bench_app"
 bench_output="${TOKFIRE_APP_OUTPUT:-$PWD/build/TokFire Bench.app}"
 mkdir -p "$(dirname "$bench_output")"
@@ -41,4 +50,4 @@ ditto --noextattr --norsrc "$bench_app" "$bench_output"
 xattr -dr com.apple.FinderInfo "$bench_output" 2>/dev/null || true
 xattr -dr com.apple.ResourceFork "$bench_output" 2>/dev/null || true
 codesign --verify --strict "$bench_output"
-printf 'Ad-hoc signed local developer app (not notarized): %s\n' "$bench_output"
+printf 'Built app (notarization is performed by build-dmg.sh in release mode): %s\n' "$bench_output"
