@@ -1,0 +1,775 @@
+{
+  "version": 1,
+  "parameters": [
+    {
+      "key": "temperature",
+      "label": "Temperature",
+      "group": "Sampling",
+      "type": "number",
+      "default": "0",
+      "engines": [
+        "llama.cpp",
+        "Ollama",
+        "vLLM",
+        "oMLX"
+      ],
+      "min": 0,
+      "max": 2,
+      "choices": null,
+      "help": "",
+      "managed": false
+    },
+    {
+      "key": "top_p",
+      "label": "Top-P",
+      "group": "Sampling",
+      "type": "number",
+      "default": "0.95",
+      "engines": [
+        "llama.cpp",
+        "Ollama",
+        "vLLM",
+        "oMLX"
+      ],
+      "min": 0.001,
+      "max": 1,
+      "choices": null,
+      "help": "",
+      "managed": false
+    },
+    {
+      "key": "min_p",
+      "label": "Min-P",
+      "group": "Sampling",
+      "type": "number",
+      "default": "0.05",
+      "engines": [
+        "llama.cpp",
+        "Ollama",
+        "vLLM"
+      ],
+      "min": 0,
+      "max": 1,
+      "choices": null,
+      "help": "",
+      "managed": false
+    },
+    {
+      "key": "repeat_penalty",
+      "label": "Repetition penalty",
+      "group": "Sampling",
+      "type": "number",
+      "default": "1.1",
+      "engines": [
+        "llama.cpp",
+        "Ollama",
+        "vLLM"
+      ],
+      "min": 0.01,
+      "max": 2,
+      "choices": null,
+      "help": "",
+      "managed": false
+    },
+    {
+      "key": "presence_penalty",
+      "label": "Presence penalty",
+      "group": "Sampling",
+      "type": "number",
+      "default": "0",
+      "engines": [
+        "llama.cpp",
+        "vLLM"
+      ],
+      "min": -2,
+      "max": 2,
+      "choices": null,
+      "help": "",
+      "managed": false
+    },
+    {
+      "key": "frequency_penalty",
+      "label": "Frequency penalty",
+      "group": "Sampling",
+      "type": "number",
+      "default": "0",
+      "engines": [
+        "llama.cpp",
+        "vLLM"
+      ],
+      "min": -2,
+      "max": 2,
+      "choices": null,
+      "help": "",
+      "managed": false
+    },
+    {
+      "key": "typical_p",
+      "label": "Typical-P",
+      "group": "Sampling",
+      "type": "number",
+      "default": "1",
+      "engines": [
+        "llama.cpp"
+      ],
+      "min": 0.001,
+      "max": 1,
+      "choices": null,
+      "help": "",
+      "managed": false
+    },
+    {
+      "key": "top_n_sigma",
+      "label": "Top-n sigma",
+      "group": "Sampling",
+      "type": "number",
+      "default": "-1",
+      "engines": [
+        "llama.cpp"
+      ],
+      "min": -1,
+      "max": 10,
+      "choices": null,
+      "help": "",
+      "managed": false
+    },
+    {
+      "key": "dynatemp_range",
+      "label": "Dynamic temperature range",
+      "group": "Sampling",
+      "type": "number",
+      "default": "0",
+      "engines": [
+        "llama.cpp"
+      ],
+      "min": 0,
+      "max": 2,
+      "choices": null,
+      "help": "",
+      "managed": false
+    },
+    {
+      "key": "dynatemp_exponent",
+      "label": "Dynamic temperature exponent",
+      "group": "Sampling",
+      "type": "number",
+      "default": "1",
+      "engines": [
+        "llama.cpp"
+      ],
+      "min": 0.01,
+      "max": 10,
+      "choices": null,
+      "help": "",
+      "managed": false
+    },
+    {
+      "key": "dry_multiplier",
+      "label": "DRY multiplier",
+      "group": "Sampling",
+      "type": "number",
+      "default": "0",
+      "engines": [
+        "llama.cpp"
+      ],
+      "min": 0,
+      "max": 10,
+      "choices": null,
+      "help": "",
+      "managed": false
+    },
+    {
+      "key": "dry_base",
+      "label": "DRY base",
+      "group": "Sampling",
+      "type": "number",
+      "default": "1.75",
+      "engines": [
+        "llama.cpp"
+      ],
+      "min": 1,
+      "max": 10,
+      "choices": null,
+      "help": "",
+      "managed": false
+    },
+    {
+      "key": "xtc_probability",
+      "label": "XTC probability",
+      "group": "Sampling",
+      "type": "number",
+      "default": "0",
+      "engines": [
+        "llama.cpp"
+      ],
+      "min": 0,
+      "max": 1,
+      "choices": null,
+      "help": "",
+      "managed": false
+    },
+    {
+      "key": "xtc_threshold",
+      "label": "XTC threshold",
+      "group": "Sampling",
+      "type": "number",
+      "default": "0.1",
+      "engines": [
+        "llama.cpp"
+      ],
+      "min": 0,
+      "max": 1,
+      "choices": null,
+      "help": "",
+      "managed": false
+    },
+    {
+      "key": "mirostat_tau",
+      "label": "Mirostat tau",
+      "group": "Sampling",
+      "type": "number",
+      "default": "5",
+      "engines": [
+        "llama.cpp",
+        "Ollama"
+      ],
+      "min": 0,
+      "max": 20,
+      "choices": null,
+      "help": "",
+      "managed": false
+    },
+    {
+      "key": "mirostat_eta",
+      "label": "Mirostat eta",
+      "group": "Sampling",
+      "type": "number",
+      "default": "0.1",
+      "engines": [
+        "llama.cpp",
+        "Ollama"
+      ],
+      "min": 0.001,
+      "max": 1,
+      "choices": null,
+      "help": "",
+      "managed": false
+    },
+    {
+      "key": "top_k",
+      "label": "Top-K (0 disables; vLLM sends -1)",
+      "group": "Sampling",
+      "type": "integer",
+      "default": "40",
+      "engines": [
+        "llama.cpp",
+        "Ollama",
+        "vLLM"
+      ],
+      "min": 0,
+      "max": 1000,
+      "choices": null,
+      "help": "",
+      "managed": false
+    },
+    {
+      "key": "repeat_last_n",
+      "label": "Repeat lookback (-1 = context)",
+      "group": "Sampling",
+      "type": "integer",
+      "default": "64",
+      "engines": [
+        "llama.cpp",
+        "Ollama"
+      ],
+      "min": -1,
+      "max": 131072,
+      "choices": null,
+      "help": "",
+      "managed": false
+    },
+    {
+      "key": "seed",
+      "label": "Seed (-1 = random)",
+      "group": "Sampling",
+      "type": "integer",
+      "default": "42",
+      "engines": [
+        "llama.cpp",
+        "Ollama",
+        "vLLM"
+      ],
+      "min": -1,
+      "max": 2147483647,
+      "choices": null,
+      "help": "",
+      "managed": false
+    },
+    {
+      "key": "max_tokens",
+      "label": "Maximum output tokens (bounded)",
+      "group": "Sampling",
+      "type": "integer",
+      "default": "512",
+      "engines": [
+        "llama.cpp",
+        "Ollama",
+        "vLLM",
+        "oMLX"
+      ],
+      "min": 1,
+      "max": 32768,
+      "choices": null,
+      "help": "",
+      "managed": false
+    },
+    {
+      "key": "dry_allowed_length",
+      "label": "DRY allowed length",
+      "group": "Sampling",
+      "type": "integer",
+      "default": "2",
+      "engines": [
+        "llama.cpp"
+      ],
+      "min": 0,
+      "max": 128,
+      "choices": null,
+      "help": "",
+      "managed": false
+    },
+    {
+      "key": "dry_penalty_last_n",
+      "label": "DRY lookback",
+      "group": "Sampling",
+      "type": "integer",
+      "default": "-1",
+      "engines": [
+        "llama.cpp"
+      ],
+      "min": -1,
+      "max": 131072,
+      "choices": null,
+      "help": "",
+      "managed": false
+    },
+    {
+      "key": "mirostat",
+      "label": "Mirostat (0 off, 1 or 2)",
+      "group": "Sampling",
+      "type": "integer",
+      "default": "0",
+      "engines": [
+        "llama.cpp",
+        "Ollama"
+      ],
+      "min": 0,
+      "max": 2,
+      "choices": null,
+      "help": "",
+      "managed": false
+    },
+    {
+      "key": "stop",
+      "label": "Stop sequences (one per line)",
+      "group": "Sampling",
+      "type": "text",
+      "default": "",
+      "engines": [
+        "llama.cpp",
+        "Ollama",
+        "vLLM",
+        "oMLX"
+      ],
+      "min": null,
+      "max": null,
+      "choices": null,
+      "help": "Up to 8 sequences. Ends generation when matched.",
+      "managed": false
+    },
+    {
+      "key": "samplers",
+      "label": "Sampler order (comma separated)",
+      "group": "Sampling",
+      "type": "text",
+      "default": "penalties,dry,top_n_sigma,top_k,typ_p,top_p,min_p,xtc,temperature",
+      "engines": [
+        "llama.cpp"
+      ],
+      "min": null,
+      "max": null,
+      "choices": null,
+      "help": "Only supported sampler names; order affects output.",
+      "managed": false
+    },
+    {
+      "key": "context_tokens",
+      "label": "Context token budget",
+      "group": "Runtime",
+      "type": "integer",
+      "default": "8192",
+      "engines": [
+        "llama.cpp",
+        "Ollama"
+      ],
+      "min": 512,
+      "max": 131072,
+      "choices": null,
+      "help": "llama.cpp: per-slot context × server slots. Ollama: num_ctx. May require much more memory.",
+      "managed": false
+    },
+    {
+      "key": "gpu_layers",
+      "label": "GPU offload layers",
+      "group": "Runtime",
+      "type": "integer",
+      "default": "999",
+      "engines": [
+        "llama.cpp"
+      ],
+      "min": 0,
+      "max": 999,
+      "choices": null,
+      "help": "",
+      "managed": true
+    },
+    {
+      "key": "parallel_slots",
+      "label": "Server slots",
+      "group": "Runtime",
+      "type": "integer",
+      "default": "3",
+      "engines": [
+        "llama.cpp"
+      ],
+      "min": 1,
+      "max": 20,
+      "choices": null,
+      "help": "",
+      "managed": true
+    },
+    {
+      "key": "batch_size",
+      "label": "Batch size",
+      "group": "Runtime",
+      "type": "integer",
+      "default": "512",
+      "engines": [
+        "llama.cpp"
+      ],
+      "min": 1,
+      "max": 8192,
+      "choices": null,
+      "help": "",
+      "managed": true
+    },
+    {
+      "key": "ubatch_size",
+      "label": "Micro-batch size",
+      "group": "Runtime",
+      "type": "integer",
+      "default": "512",
+      "engines": [
+        "llama.cpp"
+      ],
+      "min": 1,
+      "max": 8192,
+      "choices": null,
+      "help": "",
+      "managed": true
+    },
+    {
+      "key": "threads",
+      "label": "CPU threads",
+      "group": "Runtime",
+      "type": "integer",
+      "default": "8",
+      "engines": [
+        "llama.cpp"
+      ],
+      "min": 1,
+      "max": 256,
+      "choices": null,
+      "help": "",
+      "managed": true
+    },
+    {
+      "key": "cache_type_k",
+      "label": "K cache precision",
+      "group": "Runtime",
+      "type": "choice",
+      "default": "f16",
+      "engines": [
+        "llama.cpp"
+      ],
+      "min": null,
+      "max": null,
+      "choices": [
+        "f16",
+        "q8_0",
+        "q4_0"
+      ],
+      "help": "",
+      "managed": true
+    },
+    {
+      "key": "cache_type_v",
+      "label": "V cache precision",
+      "group": "Runtime",
+      "type": "choice",
+      "default": "f16",
+      "engines": [
+        "llama.cpp"
+      ],
+      "min": null,
+      "max": null,
+      "choices": [
+        "f16",
+        "q8_0",
+        "q4_0"
+      ],
+      "help": "",
+      "managed": true
+    },
+    {
+      "key": "flash_attention",
+      "label": "Flash Attention",
+      "group": "Runtime",
+      "type": "choice",
+      "default": "off",
+      "engines": [
+        "llama.cpp"
+      ],
+      "min": null,
+      "max": null,
+      "choices": [
+        "on",
+        "off",
+        "auto"
+      ],
+      "help": "",
+      "managed": true
+    },
+    {
+      "key": "mmap",
+      "label": "Memory-map weights",
+      "group": "Runtime",
+      "type": "choice",
+      "default": "true",
+      "engines": [
+        "llama.cpp"
+      ],
+      "min": null,
+      "max": null,
+      "choices": [
+        "true",
+        "false"
+      ],
+      "help": "",
+      "managed": true
+    },
+    {
+      "key": "mlock",
+      "label": "Lock weights in RAM",
+      "group": "Runtime",
+      "type": "choice",
+      "default": "false",
+      "engines": [
+        "llama.cpp"
+      ],
+      "min": null,
+      "max": null,
+      "choices": [
+        "true",
+        "false"
+      ],
+      "help": "",
+      "managed": true
+    },
+    {
+      "key": "kv_offload",
+      "label": "Offload KV cache",
+      "group": "Runtime",
+      "type": "choice",
+      "default": "true",
+      "engines": [
+        "llama.cpp"
+      ],
+      "min": null,
+      "max": null,
+      "choices": [
+        "true",
+        "false"
+      ],
+      "help": "",
+      "managed": true
+    },
+    {
+      "key": "rope_freq_base",
+      "label": "RoPE frequency base",
+      "group": "Runtime",
+      "type": "number",
+      "default": "10000",
+      "engines": [
+        "llama.cpp"
+      ],
+      "min": 1e-06,
+      "max": 10000000,
+      "choices": null,
+      "help": "Model-specific; changing this can reduce quality.",
+      "managed": true
+    },
+    {
+      "key": "rope_freq_scale",
+      "label": "RoPE frequency scale",
+      "group": "Runtime",
+      "type": "number",
+      "default": "1",
+      "engines": [
+        "llama.cpp"
+      ],
+      "min": 1e-06,
+      "max": 10000000,
+      "choices": null,
+      "help": "Model-specific; changing this can reduce quality.",
+      "managed": true
+    },
+    {
+      "key": "tensor_split",
+      "label": "Multi-GPU split (e.g. 1,1)",
+      "group": "Runtime",
+      "type": "text",
+      "default": "1,1",
+      "engines": [
+        "llama.cpp"
+      ],
+      "min": null,
+      "max": null,
+      "choices": null,
+      "help": "llama.cpp device weight split; requires a compatible multi-GPU build.",
+      "managed": true
+    },
+    {
+      "key": "draft_model",
+      "label": "Speculative draft model (GGUF path)",
+      "group": "Runtime",
+      "type": "text",
+      "default": "",
+      "engines": [
+        "llama.cpp"
+      ],
+      "min": null,
+      "max": null,
+      "choices": null,
+      "help": "Compatible draft model required; speedup is not guaranteed.",
+      "managed": true
+    },
+    {
+      "key": "chat_template",
+      "label": "Chat template (runtime-supported name)",
+      "group": "Runtime",
+      "type": "text",
+      "default": "chatml",
+      "engines": [
+        "llama.cpp"
+      ],
+      "min": null,
+      "max": null,
+      "choices": null,
+      "help": "Wrong template can break model responses.",
+      "managed": true
+    },
+    {
+      "key": "system_prompt",
+      "label": "System prompt",
+      "group": "Output / scenario",
+      "type": "text",
+      "default": "",
+      "engines": [
+        "llama.cpp",
+        "Ollama",
+        "vLLM",
+        "oMLX"
+      ],
+      "min": null,
+      "max": null,
+      "choices": null,
+      "help": "Local-only; report stores its hash, not the text.",
+      "managed": false
+    },
+    {
+      "key": "prompt",
+      "label": "Custom user prompt",
+      "group": "Output / scenario",
+      "type": "text",
+      "default": "",
+      "engines": [
+        "llama.cpp",
+        "Ollama",
+        "vLLM",
+        "oMLX"
+      ],
+      "min": null,
+      "max": null,
+      "choices": null,
+      "help": "Chat workloads only. Agent tasks keep their verifiable instructions.",
+      "managed": false
+    },
+    {
+      "key": "grammar",
+      "label": "GBNF grammar",
+      "group": "Output / scenario",
+      "type": "text",
+      "default": "",
+      "engines": [
+        "llama.cpp"
+      ],
+      "min": null,
+      "max": null,
+      "choices": null,
+      "help": "Constrain llama.cpp output. Cannot combine with JSON schema.",
+      "managed": false
+    },
+    {
+      "key": "json_schema",
+      "label": "JSON schema",
+      "group": "Output / scenario",
+      "type": "text",
+      "default": "{}",
+      "engines": [
+        "llama.cpp",
+        "Ollama",
+        "vLLM"
+      ],
+      "min": null,
+      "max": null,
+      "choices": null,
+      "help": "JSON object; constrained output depends on runtime/model support.",
+      "managed": false
+    },
+    {
+      "key": "logit_bias",
+      "label": "Logit bias (JSON token-ID → bias)",
+      "group": "Output / scenario",
+      "type": "text",
+      "default": "{}",
+      "engines": [
+        "llama.cpp",
+        "vLLM"
+      ],
+      "min": null,
+      "max": null,
+      "choices": null,
+      "help": "Up to 128 token IDs, bias between -100 and 100.",
+      "managed": false
+    }
+  ],
+  "unsupported": [
+    "TFS-Z: not supported by this tested adapter.",
+    "N / multiple choices and beam search: not supported by the one-stream benchmark contract. Use concurrent jobs for separate requests.",
+    "Vision / mmproj: requires a separate image workload and accuracy rubric.",
+    "vLLM tensor_parallel_size / gpu_memory_utilization / max_num_seqs: configure on the external server; this app does not reload it.",
+    "GGUF quantization is selected by choosing a model file; it cannot be changed during a request.",
+    "LM Studio is not yet an explicitly supported benchmark adapter."
+  ]
+}

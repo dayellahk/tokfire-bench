@@ -64,7 +64,7 @@ struct WorkspaceView: View {
             sidebar
             ScrollViewReader { proxy in
                 ScrollView { VStack(alignment: .leading, spacing: 24) {
-                    HStack { Text("TOKFIRE BENCH / TOKFIRE LABS").font(.system(size: 10, weight: .semibold, design: .monospaced)).tracking(1.5).foregroundColor(accent); Spacer(); Tag(text: "v0.7.0 · Apple Silicon") }
+                    HStack { Text("TOKFIRE BENCH / TOKFIRE LABS").font(.system(size: 10, weight: .semibold, design: .monospaced)).tracking(1.5).foregroundColor(accent); Spacer(); Tag(text: "v0.9.0 · Apple Silicon") }
                     VStack(alignment: .leading, spacing: 9) { Text(L(page == .discover ? "headline" : page.rawValue)).font(.system(size: 30, weight: .bold)); Text(L("subhead")).foregroundColor(muted) }
                     switch page { case .discover: discovery; case .benchmark: benchmark; case .history: history; case .settings: settings }
                     Label(L("privacy"), systemImage: "lock.shield").font(.caption).foregroundColor(muted)
@@ -175,9 +175,10 @@ struct WorkspaceView: View {
                         Stepper("\(L("repeats")): \(bench.repeats)", value: $bench.repeats, in: 3...5).disabled(bench.running)
                         Toggle(L("sweep"), isOn: $bench.sweep).disabled(bench.running)
                         Text(L("workloadHelp")).font(.caption).foregroundColor(muted)
+                        AdvancedControls(bench: bench, pro: bench.pro).disabled(bench.running)
                     }
                 }
-                Divider(); UploadPanel(store: bench.uploads)
+                Divider(); if bench.advancedActive { Text(L("advancedLocalOnly")).font(.caption).foregroundColor(.orange) } else { UploadPanel(store: bench.uploads) }
                 HStack { Spacer(); if bench.running { Button(L("stop")) { bench.cancel() }.disabled(bench.stopping) } else { Button { bench.run() } label: { Label(L("start"), systemImage: "play.fill").padding(.vertical, 5) }.buttonStyle(.borderedProminent).disabled(!bench.validSelection || catalog.downloading) } }
             }
             Panel(title: "02 / " + L("progress")) {

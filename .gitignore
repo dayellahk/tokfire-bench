@@ -70,3 +70,5 @@ __pycache__/
 /.openai/
 /deploy/seed.mjs
 /scripts/import-omlx.py
+
+/native/.build-tests/

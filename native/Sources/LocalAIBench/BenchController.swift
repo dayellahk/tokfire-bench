@@ -11,6 +11,9 @@ import UniformTypeIdentifiers
     }
     let uploads = UploadStore()
     let pro = ProStore()
+    @Published var advancedMode = false
+    @Published var advancedValues: [String:String] = [:]
+    var advancedActive: Bool { advancedMode && usesWorkloads }
     @Published var workloadMode = true
     @Published var workload = "short-chat"
     @Published var repeats = 3
@@ -92,7 +95,7 @@ import UniformTypeIdentifiers
         workloadHistory = urls.filter { url in
             guard let data = try? Data(contentsOf: url), data.count <= 4_000_000,
                   let report = try? JSONDecoder().decode(WorkloadReport.self, from: data) else { return false }
-            return report.specVersion == "tokfire-workloads-v1" && !report.models.isEmpty
+            return ["tokfire-workloads-v1", "tokfire-advanced-v1"].contains(report.specVersion) && !report.models.isEmpty
         }.sorted { $0.lastPathComponent > $1.lastPathComponent }
         history = entries.sorted { $0.report.measuredAt > $1.report.measuredAt }
     }
@@ -113,7 +116,8 @@ import UniformTypeIdentifiers
     }
     func run() {
         guard !running, validSelection else { return }
-        if !usesWorkloads || !uploads.enabled { startRun(challenge: nil); return }
+        if advancedActive && (pro.keyForRun == nil || advancedValues.isEmpty) { message = "Advanced tests require an active Pro license and at least one selected parameter."; return }
+        if advancedActive || !usesWorkloads || !uploads.enabled { startRun(challenge: nil); return }
         running=true; stopping=false; phase="Preparing upload protection"; message="Requesting a one-time test challenge…"
         let config: [String:Any] = ["workload": workload, "engine": backend,
             "model": externalRuntime ? servedModel.trimmingCharacters(in:.whitespaces) : backend == "oMLX" ? "benchmark-model" : models[0].lastPathComponent,
@@ -141,6 +145,13 @@ import UniformTypeIdentifiers
             } else if usesJobs {
                 process.arguments = ["-B", "-u", script.path, "--engine", backend, "--server", backend == "oMLX" ? omlx : server, "--model", backend == "oMLX" ? mlxModel!.path : models[0].path, "--jobs", String(concurrentJobs), "--output", destination.path]
             } else { process.arguments = ["-B", "-u", script.path] + (trial ? ["--trial"] : []) + ["--server", server, "--output", destination.path, "--models"] + models.map(\.path) }
+            let advancedFile = destination.deletingPathExtension().appendingPathExtension("advanced-config")
+            if advancedActive {
+                let data = try JSONSerialization.data(withJSONObject: advancedValues, options: [.sortedKeys])
+                try data.write(to: advancedFile, options: .atomic)
+                try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: advancedFile.path)
+                process.arguments! += ["--advanced-config", advancedFile.path]
+            }
             if let challenge, usesWorkloads { process.arguments! += ["--challenge", challenge.path] }
             // Keys travel over stdin, never argv, report JSON or runtime logs.
             let input = Pipe(); process.standardInput = input
@@ -148,11 +159,11 @@ import UniformTypeIdentifiers
             let pipe = Pipe(); process.standardOutput = pipe; process.standardError = pipe
             runToken = UUID(); let token = runToken
             running = true; stopping = false; result = nil; workloadResult = nil; workloadCommentary = ""; report = nil; latest = nil; completedSamples = 0
-            runConsent = uploads.enabled; runPublication = uploads.publish
+            runConsent = uploads.enabled && !advancedActive; runPublication = uploads.publish
             totalSamples = expectedSamples; currentModel = 0; events = []; started = Date()
             phase = "檢查環境"; message = "檢查 runtime 及硬件，首次啟動可能需要編譯 Metal shaders。"
             task = process
-            do { try process.run(); if usesJobs && concurrentJobs > 3, let key = pro.keyForRun { input.fileHandleForWriting.write(Data((key + "\n").utf8)) }; try? input.fileHandleForWriting.close() } catch { running = false; task = nil; throw error }
+            do { try process.run(); if (advancedActive || (usesJobs && concurrentJobs > 3)), let key = pro.keyForRun { input.fileHandleForWriting.write(Data((key + "\n").utf8)) }; try? input.fileHandleForWriting.close() } catch { try? FileManager.default.removeItem(at: advancedFile); running = false; task = nil; throw error }
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
                 var pending = Data(); var diagnostic = ""
                 while true {
@@ -167,6 +178,7 @@ import UniformTypeIdentifiers
                     if pending.count > 1_000_000 { diagnostic = "Runtime 輸出過長。"; pending.removeAll(keepingCapacity: false) }
                 }
                 process.waitUntilExit()
+                try? FileManager.default.removeItem(at: advancedFile)
                 if let challenge { try? FileManager.default.removeItem(at:challenge) }
                 let detail = String((diagnostic + String(decoding: pending, as: UTF8.self)).suffix(4000)).trimmingCharacters(in: .whitespacesAndNewlines)
                 DispatchQueue.main.async {
@@ -201,7 +213,7 @@ import UniformTypeIdentifiers
         case "license": if event["valid"] as? Bool == false { pro.invalidate() }
         case "error": phase = "測試失敗"
         case "complete":
-            if let data = try? Data(contentsOf: destination), let parsed = try? JSONDecoder().decode(WorkloadReport.self, from: data), parsed.specVersion == "tokfire-workloads-v1" {
+            if let data = try? Data(contentsOf: destination), let parsed = try? JSONDecoder().decode(WorkloadReport.self, from: data), ["tokfire-workloads-v1", "tokfire-advanced-v1"].contains(parsed.specVersion) {
                 workloadResult = parsed; report = destination; completedSamples = totalSamples; phase = "測試完成"
                 workloadCommentary = (try? String(contentsOf: destination.deletingPathExtension().appendingPathExtension("md"), encoding: .utf8)) ?? ""
                 uploads.enqueue(destination, consent: runConsent, publication: runPublication); reloadHistory(); return

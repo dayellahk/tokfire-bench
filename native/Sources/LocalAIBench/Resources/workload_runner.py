@@ -22,7 +22,9 @@ from runner import atomic_json, emit, hardware, sha256
 from jobs_runner import launch, workspace, stop_all, preflight
 from omlx_runner import model_manifest
 from platform_support import windows_hardware
-from pro_license import authorize
+from pro_license import authorize, verify_license
+import advanced_config
+ADVANCED = None
 import run_challenge
 CHALLENGE = None
 
@@ -112,6 +114,7 @@ def stream(base, engine, model, messages, max_tokens, context, timeout=180):
     else:
         payload.update(temperature=0, max_tokens=max_tokens, stream_options={'include_usage':True})
         if engine == 'llama.cpp': payload.update(cache_prompt=False, seed=42, chat_template_kwargs={'enable_thinking':False})
+    if ADVANCED is not None: advanced_config.apply_payload(payload, ADVANCED, engine)
     connection = http.client.HTTPConnection(host, port, timeout=timeout)
     with LOCK: CONNECTIONS.add(connection)
     start = time.perf_counter(); first = None; last = None; first_visible = None
@@ -202,12 +205,14 @@ def measure_job(base, engine, model, profile, context, count, repeat, job, barri
     simulated = profile in SIM_PROFILES
     agent = AgentWorkload(profile, request_id) if simulated else AgentTools(CHALLENGE['nonce'] if CHALLENGE else None)
     is_agent = simulated or profile == 'agent-tools'
-    messages = [{'role':'user', 'content':f'Run ID: {request_id}\n' + PROFILES[profile]['prompt']}]
+    prompt = (ADVANCED or {}).get('prompt', PROFILES[profile]['prompt'])
+    messages = [{'role':'user', 'content':f'Run ID: {request_id}\n' + prompt}]
+    if ADVANCED and 'system_prompt' in ADVANCED: messages.insert(0, {'role':'system','content':ADVANCED['system_prompt']})
     try:
         for step in range(12 if simulated else 5 if is_agent else 1):
             remaining = timeout-(time.perf_counter()-start) if simulated else timeout
             if remaining <= 0: raise MeasurementError('timeout')
-            metrics, content = stream(base, engine, model, messages, PROFILES[profile]['maxOutputTokens'], context, remaining)
+            metrics, content = stream(base, engine, model, messages, (ADVANCED or {}).get('max_tokens', PROFILES[profile]['maxOutputTokens']), context, remaining)
             requests.append(metrics)
             if not is_agent:
                 if metrics['firstVisibleMs'] is None: status = 'partial'
@@ -247,16 +252,30 @@ def round_jobs(base, engine, model, profile, context, count, repeat, timeout):
     return rows, {'concurrency':count,'repeat':repeat,'wallMs':elapsed,'aggregateTps':tokens/(elapsed/1000)}
 
 def run(options):
-    global CHALLENGE
+    global CHALLENGE, ADVANCED
+    ADVANCED = None
     counts = levels(options.jobs, options.sweep)
-    key = sys.stdin.readline(4096).strip() if options.jobs>3 else None
-    try: authorize(options.jobs,key)
+    advanced_path = getattr(options, 'advanced_config', None)
+    key = sys.stdin.readline(4096).strip() if options.jobs>3 or advanced_path else None
+    try:
+        authorize(options.jobs,key)
+        if advanced_path and options.jobs<=3:
+            if not key: raise ValueError('Advanced tests require an active Pro license, even for one job.')
+            verify_license(key)
     except ValueError:
         emit('license',valid=False); raise
+    if advanced_path:
+        if getattr(options, 'challenge', None): raise ValueError('Advanced experiments cannot use a standard ranking challenge.')
+        with Path(advanced_path).open('rb') as config_file: raw = config_file.read(65537)
+        if len(raw)>65536: raise ValueError('Advanced settings exceed 64 KiB.')
+        ADVANCED = advanced_config.validate(json.loads(raw), options.engine, not options.endpoint, options.jobs, options.workload)
     config = {'workload': options.workload, 'engine': options.engine, 'model': options.model if options.endpoint else ('benchmark-model' if options.engine == 'oMLX' else Path(options.model).name), 'concurrencyLevels': counts, 'repeats': options.repeats}
     CHALLENGE = run_challenge.load_ticket(getattr(options, 'challenge', None), config)
     emit('progress', phase='integrity', message='Server challenge active; hardware remains self-reported.' if CHALLENGE else 'No server challenge: offline / community-unverified run.')
-    profile = PROFILES[options.workload]; context = profile['contextTokens']
+    profile = PROFILES[options.workload]; context = (ADVANCED or {}).get('context_tokens', profile['contextTokens'])
+    if (ADVANCED or {}).get('max_tokens',profile['maxOutputTokens'])>=context: raise ValueError('Output limit must be smaller than the context token budget.')
+    advanced_evidence = advanced_config.evidence(ADVANCED, fingerprint(options.workload)) if ADVANCED is not None else None
+    if ADVANCED is not None: emit('progress',phase='advanced',message='Pro advanced experiment: local report only; runtime parameter effectiveness is not independently verified.')
     hw = detect_hardware(); emit('hardware',hardware=hw)
     if options.engine == 'oMLX' and hw['platform'] != 'macOS': raise ValueError('oMLX requires Apple Silicon macOS.')
     before = battery_snapshot(); samples = []; groups = []; model_hash = None; binary_hash = None; load_ms = None
@@ -273,16 +292,18 @@ def run(options):
                 base = options.endpoint.rstrip('/'); model = options.model
             else:
                 path = Path(options.model).resolve()
-                _, estimate = preflight([path],options.engine,hw['memoryBytes'],options.jobs)
+                slots = (ADVANCED or {}).get('parallel_slots',options.jobs)
+                _, estimate = preflight([path],options.engine,hw['memoryBytes'],slots)
+                if ADVANCED and 'draft_model' in ADVANCED: estimate += Path(ADVANCED['draft_model']).stat().st_size*1.25
                 # Longer contexts need a larger per-slot KV allowance; still a heuristic, not a fit guarantee.
-                estimate += options.jobs*.5*1024**3*(context/4096-1)
+                estimate += slots*.5*1024**3*(context/4096-1)
                 if estimate > hw['memoryBytes']*.8: raise ValueError('Estimated weights + context/job memory exceed 80% RAM; reduce jobs or workload length.')
                 emit('progress',phase='hash',message='Hashing selected model and runtime')
                 model_hash = model_manifest(path) if options.engine=='oMLX' else sha256(path)
                 binary_hash = sha256(options.server)
                 emit('progress',phase='load',message='Starting a benchmark-owned model server')
                 begin = time.perf_counter()
-                base = launch(options.engine, options.server, path, options.jobs, hw['cpuCores'], Path(tmp), context=context, gpu_layers=options.gpu_layers)
+                base = launch(options.engine, options.server, path, slots, hw['cpuCores'], Path(tmp), context=context, gpu_layers=options.gpu_layers, **({'advanced': ADVANCED} if ADVANCED is not None else {}))
                 load_ms = (time.perf_counter()-begin)*1000
                 model = 'benchmark-model' if options.engine=='oMLX' else path.name
             emit('progress',phase='warmup',message='Running one excluded warm-up; first model initialization may take time')
@@ -296,26 +317,33 @@ def run(options):
                     samples += rows; groups.append(group)
     finally:
         emit('progress',phase='cleanup',message='Closing benchmark-owned processes'); stop_all()
-    report = {'specVersion':SPEC,'runnerVersion':VERSION,'runId':CHALLENGE['runId'] if CHALLENGE else str(uuid.uuid4()),
+    report = {'specVersion':advanced_config.SPEC if ADVANCED is not None else SPEC,'runnerVersion':'0.9.0' if ADVANCED is not None else VERSION,'runId':CHALLENGE['runId'] if CHALLENGE else str(uuid.uuid4()),
               'measuredAt':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()), 'hardware':hw,
               'runtime':{'name':options.engine,'binarySha256':binary_hash,'management':'external-loopback' if options.endpoint else 'managed',
                          'identity':'unverified-server-model-id' if options.endpoint else 'local-file-sha256',
-                         'gpuLayersRequested':options.gpu_layers if not options.endpoint and options.engine=='llama.cpp' else None},
+                         'gpuLayersRequested':(ADVANCED or {}).get('gpu_layers',options.gpu_layers) if not options.endpoint and options.engine=='llama.cpp' else None},
               'settings':{'workload':options.workload,'workloadSha256':fingerprint(options.workload),'concurrencyLevels':counts,
-                          'repeats':options.repeats,'maxOutputTokens':profile['maxOutputTokens'],'contextTokens':context,
-                          'warmups':1,'temperature':0,'cachePolicy':'unique-prefix; report observed cache counts',
+                          'repeats':options.repeats,'maxOutputTokens':(ADVANCED or {}).get('max_tokens',profile['maxOutputTokens']),'contextTokens':context,
+                          'warmups':1,'temperature':(ADVANCED or {}).get('temperature',0),'cachePolicy':'unique-prefix; report observed cache counts',
                           'targetTps':[100,200],'timing':'runtime decode/prefill; client first output and wall time',
                           'inferenceLocation':'same-device','hardwareRole':'inference-host','timeoutSeconds':options.timeout},
               'models':[{'modelName':clean(model,200),'modelSha256':model_hash,'loadMs':load_ms,'samples':sorted(samples,key=lambda r:(r['concurrency'],r['repeat'],r['jobId']))}],
               'groups':groups,'telemetry':{'before':before,'after':battery_snapshot(),'energyJoules':None,'peakGpuMemoryBytes':None}}
+    if advanced_evidence:
+        report['settings']['advanced'] = advanced_evidence
+        report['settings']['mode'] = 'pro-advanced'
     if CHALLENGE: report['challenge'] = run_challenge.evidence(CHALLENGE)
     output = Path(options.output); atomic_json(output,report)
-    output.with_suffix('.md').write_text(assessment(report),encoding='utf-8')
+    notes = assessment(report)
+    if advanced_evidence:
+        notes = '# Pro advanced experiment — local only\n\nNot comparable to standard rankings. Compare only identical configuration fingerprints, model/runtime, workload, budgets and concurrency. Runtime settings are requested, not independently verified.\n\nConfiguration: '+advanced_evidence['configurationSha256']+'\n\nRequested settings (private text and paths redacted):\n```json\n'+json.dumps(advanced_evidence['requested'],indent=2)+'\n```\n\n'+notes
+    output.with_suffix('.md').write_text(notes,encoding='utf-8')
     emit('complete',message=f'Workload benchmark complete: {len(samples)} jobs measured',output=str(output))
 
 def parser():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--engine',choices=['llama.cpp','oMLX','Ollama','vLLM'],required=True)
+    p.add_argument('--advanced-config', help='Pro-only local experiment parameter JSON; never uploaded to standard rankings')
     p.add_argument('--challenge', help='Server ticket JSON obtained before the run in the same guest session used to upload')
     p.add_argument('--server'); p.add_argument('--endpoint'); p.add_argument('--model',required=True)
     p.add_argument('--workload',choices=list(PROFILES),default='short-chat')

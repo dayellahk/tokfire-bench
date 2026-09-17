@@ -76,6 +76,7 @@ let siteOrigin = "https://tokfires.com"
         do {
             let data = try Data(contentsOf: url)
             guard let report = try JSONSerialization.jsonObject(with: data) as? [String: Any], let id = report["runId"] as? String, UUID(uuidString: id) != nil else { return }
+            guard report["specVersion"] as? String != "tokfire-advanced-v1" else { status = "localOnly"; return }
             let envelope: [String: Any] = ["report": report, "consent": ["collect": true, "publish": publication, "version": "2026-09-15-v1"]]
             try JSONSerialization.data(withJSONObject: envelope).write(to: outbox.appendingPathComponent(id + ".json"), options: .atomic)
             pending = files().count; status = "uploadQueued"

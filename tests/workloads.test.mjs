@@ -52,3 +52,12 @@ test('unverified external model IDs cannot merge into exact-build comparison gro
  assert.notEqual(a.cohort,b.cohort);
  assert.equal(a.cohort,(await publicWorkloadSummary(first)).cohort);
 });
+
+test('Pro advanced experiments cannot enter standard uploads or ranking contracts',()=>{
+ const advanced=fixture();advanced.specVersion='tokfire-advanced-v1';advanced.runnerVersion='0.9.0';
+ advanced.settings.mode='pro-advanced';advanced.settings.advanced={configurationSha256:'b'.repeat(64)};
+ assert.equal(workloadSchema.safeParse(advanced).success,false);
+ assert.equal(nativeUploadSchema.safeParse(envelope(advanced)).success,false);
+ const disguised=fixture();disguised.settings.advanced={requested:{temperature:0.5}};
+ assert.equal(nativeUploadSchema.safeParse(envelope(disguised)).success,false);
+});

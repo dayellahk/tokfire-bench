@@ -3,7 +3,7 @@ using System.Text.Json.Nodes;
 namespace TokFire.Bench;
 internal static class Reports {
  public static string Assess(JsonObject report){
-  if(report["specVersion"]?.GetValue<string>()=="tokfire-workloads-v1"){
+  if(report["specVersion"]?.GetValue<string>() is "tokfire-workloads-v1" or "tokfire-advanced-v1"){
    var output=new StringBuilder("TokFire Bench — workload results\r\n");
    foreach(var level in report["settings"]!["concurrencyLevels"]!.AsArray()){
     int n=level!.GetValue<int>();var samples=report["models"]![0]!["samples"]!.AsArray().Where(s=>s!["concurrency"]!.GetValue<int>()==n).ToArray();

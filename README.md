@@ -4,6 +4,17 @@ Local AI benchmarks by **TokFire Labs**. Find a model for your computer, test it
 
 **[Website](https://tokfires.com) · [Hardware and model rankings](https://tokfires.com/?tab=rankings)**
 
+## New in 0.9: Pro advanced parameter experiments
+
+Tune sampling, benchmark-owned llama.cpp runtime settings and structured output
+through grouped desktop controls. Reports record requested settings and a
+configuration fingerprint; custom text and local paths are redacted. Advanced
+experiments stay local and separate from standard public rankings.
+
+Preview the controls for free; running requires an active Pro license and online
+verification. **Paid activation remains pending Lemon Squeezy product setup.**
+See [supported controls, engine limits and release status](docs/PRO-ADVANCED-TESTS.md).
+
 ## New in 0.8: verified agent workflow simulations
 
 Go beyond tokens per second: test whether a local model finishes a useful task, how long it takes, and what happens when multiple jobs call the **same model**.
@@ -22,9 +33,9 @@ These are bounded simulations with reproducible checks. **They do not run Hermes
 
 | Platform | Download | Status |
 | --- | --- | --- |
-| macOS Apple Silicon | [0.8.0 DMG](https://tokfires.com/TokFireBench-0.8.0-macos-arm64.dmg) | macOS 13+; ad-hoc signed, not notarized |
-| Windows x64 | [0.8.0 ZIP](https://tokfires.com/TokFireBench-0.8.0-windows-x64.zip) | Unsigned desktop preview; native GUI/GPU validation pending |
-| Linux / cross-platform | [0.8.0 Python CLI](https://tokfires.com/TokFireBench-0.8.0-cli.tar.gz) | Python 3.10+ and a compatible model endpoint |
+| macOS Apple Silicon | [0.9.0 DMG](https://tokfires.com/TokFireBench-0.9.0-macos-arm64.dmg) | macOS 13+; ad-hoc signed, not notarized |
+| Windows x64 | [0.9.0 ZIP](https://tokfires.com/TokFireBench-0.9.0-windows-x64.zip) | Unsigned desktop preview; native GUI/GPU validation pending |
+| Linux / cross-platform | [0.9.0 Python CLI](https://tokfires.com/TokFireBench-0.9.0-cli.tar.gz) | Python 3.10+ and a compatible model endpoint |
 | Android | [0.7.0 APK](https://tokfires.com/TokFireBench-0.7.0-android-preview.apk) | Original four workloads; new 0.8 simulations not yet included |
 
 Python and inference runtimes are installed separately for desktop/CLI use. Model weights are not bundled. Android requires an existing on-device or explicitly selected LAN model runtime. These are development previews.
@@ -37,8 +48,8 @@ Web portal languages: English (`/`), Traditional Chinese (`/zh-Hant`) and Simpli
 
 ## Applications
 
-- **macOS 0.8.0:** SwiftUI app for Apple Silicon, llama.cpp/GGUF, oMLX/MLX and existing local Ollama/vLLM servers. Ad-hoc signed developer preview; not Apple notarized.
-- **Windows x64 0.8.0:** self-contained .NET desktop preview for Windows 10/11 and llama.cpp/GGUF. Cross-compiled on macOS; native Windows GUI/GPU testing remains pending. See [Windows setup](windows/README.md) and [validation status](windows/VALIDATION.md).
+- **macOS 0.9.0:** SwiftUI app for Apple Silicon, llama.cpp/GGUF, oMLX/MLX and existing local Ollama/vLLM servers. Ad-hoc signed developer preview; not Apple notarized.
+- **Windows x64 0.9.0:** self-contained .NET desktop preview for Windows 10/11 and llama.cpp/GGUF. Cross-compiled on macOS; native Windows GUI/GPU testing remains pending. See [Windows setup](windows/README.md) and [validation status](windows/VALIDATION.md).
 - Free users can choose 1–3 simultaneous jobs calling the **same model**. Planned Pro license: HK$180 once, one activated device, up to 20 jobs. Live sales/activation await Lemon Squeezy merchant/product setup.
 - Python and compatible inference runtimes are installed separately. Model weights are not bundled.
 

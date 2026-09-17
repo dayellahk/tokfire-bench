@@ -2,7 +2,7 @@ import Foundation
 import SwiftUI
 
 struct WorkloadReport: Decodable, Identifiable {
-    struct Settings: Decodable { let workload: String; let concurrencyLevels: [Int]; let repeats: Int; let timeoutSeconds: Int? }
+    struct Settings: Decodable { let workload: String; let concurrencyLevels: [Int]; let repeats: Int; let timeoutSeconds: Int?; let mode: String? }
     struct Request: Decodable { let decodeTps: Double?; let prefillTps: Double?; let ttftMs: Double; let firstVisibleMs: Double?; let elapsedMs: Double; let endToEndTps: Double }
     struct Verification: Decodable { struct Check: Decodable { let id: String; let passed: Bool }; let checks: [Check]; let retries: Int }
     struct Job: Decodable { let jobId: Int; let concurrency: Int; let status: String; let elapsedMs: Double; let requests: [Request]; let verification: Verification?; let toolErrors: Int }
@@ -23,6 +23,7 @@ struct WorkloadResults: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack { Text(L("workloadResults")).font(.title2.bold()); Spacer(); Button(L("assessment") + " ↓") { bench.exportCommentary() }; Button(L("export")) { bench.export() } }
             Text(L(report.settings.workload)).font(.headline)
+            if report.settings.mode == "pro-advanced" { Text(L("advancedLocalOnly")).foregroundColor(.orange) }
             if report.models[0].samples.contains(where: { $0.verification != nil }) { Text(L("agentSimulationScope")).font(.caption); Text("\(L("taskDeadline")): \(report.settings.timeoutSeconds ?? 180) s").font(.caption) }
             ForEach(report.settings.concurrencyLevels, id: \.self) { count in
                 let jobs = report.models[0].samples.filter { $0.concurrency == count }

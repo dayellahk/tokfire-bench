@@ -7,7 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyName>TokFire Bench</AssemblyName>
-    <Version>0.8.0</Version>
+    <Version>0.9.0</Version>
     <Company>TokFire Labs</Company>
     <Product>TokFire Bench</Product>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -22,6 +22,7 @@
     <Content Include="README.md" CopyToOutputDirectory="PreserveNewest"/>
   <Content Include="../native/Sources/LocalAIBench/Resources/*.py" Link="runner/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../native/Sources/LocalAIBench/Resources/languages.json" Link="languages.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../native/Sources/LocalAIBench/Resources/advanced_parameters.json" Link="runner/advanced_parameters.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../native/Sources/LocalAIBench/Resources/lemon-squeezy.json" Link="runner/lemon-squeezy.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 <Target Name="RemoveUnusedWpfReference" BeforeTargets="ResolveAssemblyReferences"><ItemGroup><Reference Remove="@(Reference)" Condition="$([System.String]::Copy('%(Reference.Identity)').EndsWith('Microsoft.Web.WebView2.Wpf.dll'))" /></ItemGroup></Target>

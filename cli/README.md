@@ -1,3 +1,10 @@
+## 0.9 Pro advanced experiments
+
+Grouped parameter controls (or CLI `--advanced-config`) now support Pro-only
+local experiments. Standard benchmarks remain unchanged. See
+[advanced test documentation](../docs/PRO-ADVANCED-TESTS.md) for supported engines,
+report isolation and current paid-activation limits.
+
 # TokFire Bench 0.8 command-line runner
 
 Python 3.10+. Works on Apple Silicon macOS, Windows, Linux and Android/Termux.

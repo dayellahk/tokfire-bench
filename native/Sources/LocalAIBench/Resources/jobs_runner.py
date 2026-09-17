@@ -59,7 +59,7 @@ def free_port():
     with socket.socket() as sock:
         sock.bind(('127.0.0.1',0)); return sock.getsockname()[1]
 
-def launch(engine, binary, model, slots, cores, root, context=4096, gpu_layers=999):
+def launch(engine, binary, model, slots, cores, root, context=4096, gpu_layers=999, advanced=None):
     port = free_port(); base = f'http://127.0.0.1:{port}'
     if engine == 'oMLX':
         directory=root/'models'; directory.mkdir(); (directory/'benchmark-model').symlink_to(model,target_is_directory=True)
@@ -67,6 +67,9 @@ def launch(engine, binary, model, slots, cores, root, context=4096, gpu_layers=9
         health='/v1/models'
     else:
         args=[binary,'-m',str(model),'--host','127.0.0.1','--port',str(port),'-c',str(context*slots),'-ngl',str(gpu_layers),'-np',str(slots),'-b','512','-ub','512','-t',str(cores),'-tb',str(cores),'-fa','off','-ctk','f16','-ctv','f16','--no-webui','--no-warmup']
+        if advanced:
+            from advanced_config import runtime_args
+            args = runtime_args(args, advanced, binary)
         health='/health'
     env={k:v for k,v in runtime_env().items() if not k.startswith(('OMLX_','MLX_'))}
     with (root/'server.log').open('w') as log:

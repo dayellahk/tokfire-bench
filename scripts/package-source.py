@@ -20,7 +20,7 @@ def main():
     with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as out:
         for name in sorted(files):
             if name and public_source(name) and (ROOT / name).is_file():
-                out.write(ROOT / name, 'TokFireBench-0.8.0-source/' + name)
+                out.write(ROOT / name, 'TokFireBench-0.9.0-source/' + name)
     checksum = hashlib.sha256(archive.read_bytes()).hexdigest()
     archive.with_suffix('.zip.sha256').write_text(checksum + '  ' + archive.name + '\n')
     print(f'Public source archive: {archive.stat().st_size} bytes; SHA256 {checksum}')

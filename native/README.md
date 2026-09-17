@@ -1,3 +1,10 @@
+## 0.9 Pro advanced experiments
+
+Grouped parameter controls (or CLI `--advanced-config`) now support Pro-only
+local experiments. Standard benchmarks remain unchanged. See
+[advanced test documentation](../docs/PRO-ADVANCED-TESTS.md) for supported engines,
+report isolation and current paid-activation limits.
+
 ## Installing on macOS
 
 Open the DMG and drag **TokFire Bench** to **Applications**, then launch it from

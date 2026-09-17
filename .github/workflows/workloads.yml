@@ -2,7 +2,7 @@ name: Workload framework
 on:
   workflow_dispatch:
   push:
-    paths: ['native/Sources/LocalAIBench/Resources/workload*', 'native/Sources/LocalAIBench/Resources/agent_workloads.py', 'native/Tests/test_workloads.py', 'native/Tests/test_agent_workloads.py', 'lib/workloads.ts', 'tests/workloads.test.mjs', 'android/**', '.github/workflows/workloads.yml']
+    paths: ['native/Sources/LocalAIBench/Resources/workload*', 'native/Sources/LocalAIBench/Resources/agent_workloads.py', 'native/Sources/LocalAIBench/Resources/advanced*', 'native/Tests/test_advanced_workloads.py', 'native/Tests/test_workloads.py', 'native/Tests/test_agent_workloads.py', 'lib/workloads.ts', 'tests/workloads.test.mjs', 'android/**', '.github/workflows/workloads.yml']
 permissions:
   contents: read
 jobs:

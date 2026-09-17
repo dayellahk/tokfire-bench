@@ -1,3 +1,10 @@
+## 0.9 Pro advanced experiments
+
+Grouped parameter controls (or CLI `--advanced-config`) now support Pro-only
+local experiments. Standard benchmarks remain unchanged. See
+[advanced test documentation](../docs/PRO-ADVANCED-TESTS.md) for supported engines,
+report isolation and current paid-activation limits.
+
 ## Version 0.8
 
 The workload menu now includes `agent-data`, `agent-research` and `agent-recovery`. These bounded agent simulations validate report artifacts and service state; they do not run actual third-party agent products. Full check-by-check commentary is saved beside the JSON report.
